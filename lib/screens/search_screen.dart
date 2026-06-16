@@ -20,15 +20,14 @@ class _SearchScreenState extends State<SearchScreen> {
   final _controller = TextEditingController();
   SortOption _sortOption = SortOption.relevance;
 
-  final _suggestions = [
+  // Fallback khi chưa load xong từ API
+  static const _fallbackSuggestions = [
     'Artificial Intelligence',
-    'Software Engineering',
+    'Machine Learning',
     'Data Science',
     'Cybersecurity',
     'Internet of Things',
     'Blockchain',
-    'Machine Learning',
-    'Deep Learning',
   ];
 
   void _search(String topic) {
@@ -163,23 +162,96 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   Widget _buildSuggestions() {
+    final provider = context.watch<SearchProvider>();
+    final isLoading = provider.domains.isEmpty && provider.suggestedTopics.isEmpty;
+
     return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Suggested Topics', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _suggestions
-                  .map((s) => ActionChip(label: Text(s), onPressed: () => _search(s)))
-                  .toList(),
+      child: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : provider.domains.isNotEmpty
+              ? _buildDomainSuggestions(provider)
+              : _buildFlatSuggestions(provider),
+    );
+  }
+
+  Widget _buildDomainSuggestions(SearchProvider provider) {
+    final domainIcons = {
+      'Physical Sciences': Icons.science,
+      'Social Sciences': Icons.people,
+      'Health Sciences': Icons.health_and_safety,
+      'Life Sciences': Icons.eco,
+    };
+    final domainColors = {
+      'Physical Sciences': Colors.blue,
+      'Social Sciences': Colors.orange,
+      'Health Sciences': Colors.red,
+      'Life Sciences': Colors.green,
+    };
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        Text('Browse by Domain', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 12),
+        ...provider.domains.map((domain) {
+          final color = domainColors[domain.name] ?? Colors.purple;
+          final icon = domainIcons[domain.name] ?? Icons.folder;
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ExpansionTile(
+              leading: CircleAvatar(
+                backgroundColor: color.withValues(alpha: 0.15),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              title: Text(domain.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+              subtitle: Text('${domain.fields.length} fields', style: const TextStyle(fontSize: 12)),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      // Chip browse toàn domain
+                      ActionChip(
+                        avatar: Icon(icon, size: 16, color: color),
+                        label: Text('All ${domain.name}',
+                            style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+                        backgroundColor: color.withValues(alpha: 0.1),
+                        onPressed: () => context.read<SearchProvider>().searchByDomain(domain),
+                      ),
+                      // Chips từng field
+                      ...domain.fields.map((field) => ActionChip(
+                        label: Text(field.name),
+                        onPressed: () => context.read<SearchProvider>().searchByField(field),
+                      )),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildFlatSuggestions(SearchProvider provider) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Suggested Topics', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _fallbackSuggestions
+                .map((s) => ActionChip(label: Text(s), onPressed: () => _search(s)))
+                .toList(),
+          ),
+        ],
       ),
     );
   }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../providers/search_provider.dart';
 import 'publication_detail_screen.dart';
+import 'filtered_publications_screen.dart';
 
 class TrendAnalysisScreen extends StatefulWidget {
   const TrendAnalysisScreen({super.key});
@@ -195,17 +196,35 @@ class _TopJournalsTab extends StatelessWidget {
               itemCount: journals.length,
               separatorBuilder: (context, index) => const Divider(height: 1),
               itemBuilder: (context, i) {
+                final journalName = journals[i].key;
                 return ListTile(
                   leading: CircleAvatar(
                     backgroundColor: colors[i % colors.length],
                     child: Text('${i + 1}', style: const TextStyle(color: Colors.white, fontSize: 12)),
                   ),
-                  title: Text(journals[i].key, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  title: Text(journalName, maxLines: 2, overflow: TextOverflow.ellipsis),
                   trailing: Chip(label: Text('${journals[i].value}')),
                   subtitle: LinearProgressIndicator(
                     value: journals[i].value / maxCount,
                     color: colors[i % colors.length],
                   ),
+                  onTap: () {
+                    final pubs = provider.allPublications
+                        .where((p) => p.journalName == journalName)
+                        .toList();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => FilteredPublicationsScreen(
+                          title: 'Journal Publications',
+                          subtitle: journalName,
+                          publications: pubs,
+                          headerIcon: Icons.library_books,
+                          headerColor: colors[i % colors.length],
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
@@ -246,40 +265,63 @@ class _TopAuthorsTab extends StatelessWidget {
                 final entry = authors[i];
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 4),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              width: 28, height: 28,
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Center(
-                                child: Text('${i + 1}',
-                                    style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(entry.key,
-                                  style: const TextStyle(fontWeight: FontWeight.w600)),
-                            ),
-                            Text('${entry.value} papers',
-                                style: Theme.of(context).textTheme.bodySmall),
-                          ],
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      final authorName = entry.key;
+                      final pubs = provider.allPublications
+                          .where((p) => p.authors.any((a) => a.name == authorName))
+                          .toList();
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => FilteredPublicationsScreen(
+                            title: 'Author Publications',
+                            subtitle: authorName,
+                            publications: pubs,
+                            headerIcon: Icons.person,
+                            headerColor: Theme.of(context).colorScheme.primary,
+                          ),
                         ),
-                        const SizedBox(height: 6),
-                        LinearProgressIndicator(
-                          value: entry.value / maxCount,
-                          minHeight: 6,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                      ],
+                      );
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 28, height: 28,
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Center(
+                                  child: Text('${i + 1}',
+                                      style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(entry.key,
+                                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                              ),
+                              Text('${entry.value} papers',
+                                  style: Theme.of(context).textTheme.bodySmall),
+                              const SizedBox(width: 4),
+                              const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          LinearProgressIndicator(
+                            value: entry.value / maxCount,
+                            minHeight: 6,
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 );

@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import '../models/publication.dart';
+import '../models/domain.dart';
 import '../services/openalex_service.dart';
 
 class SearchProvider extends ChangeNotifier {
   final OpenAlexService _service = OpenAlexService();
 
-  // Toàn bộ data đã load (dùng cho analytics)
   List<Publication> _allPublications = [];
+  List<String> _suggestedTopics = [];
+  List<ResearchDomain> _domains = [];
 
-  // Data hiển thị theo trang
   static const int _pageSize = 10;
   int _currentDisplayPage = 1;
 
@@ -16,6 +17,77 @@ class SearchProvider extends ChangeNotifier {
   bool _isLoadingMore = false;
   String? _error;
   String _currentTopic = '';
+
+  List<String> get suggestedTopics => _suggestedTopics;
+  List<ResearchDomain> get domains => _domains;
+
+  SearchProvider() {
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    try {
+      final results = await Future.wait([
+        _service.fetchSuggestedTopics(),
+        _service.fetchDomains(),
+      ]);
+      _suggestedTopics = results[0] as List<String>;
+      _domains = results[1] as List<ResearchDomain>;
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  Future<void> searchByField(ResearchField field) async {
+    _isLoading = true;
+    _error = null;
+    _currentTopic = field.name;
+    _allPublications = [];
+    _currentDisplayPage = 1;
+    notifyListeners();
+    try {
+      final results = await Future.wait([
+        _service.searchByDomainOrField(fieldId: field.id, page: 1, perPage: 25),
+        _service.searchByDomainOrField(fieldId: field.id, page: 2, perPage: 25),
+      ]);
+      final seenIds = <String>{};
+      for (final page in results) {
+        for (final pub in page) {
+          if (seenIds.add(pub.id)) _allPublications.add(pub);
+        }
+      }
+    } catch (e) {
+      _error = 'Network error. Please try again.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> searchByDomain(ResearchDomain domain) async {
+    _isLoading = true;
+    _error = null;
+    _currentTopic = domain.name;
+    _allPublications = [];
+    _currentDisplayPage = 1;
+    notifyListeners();
+    try {
+      final results = await Future.wait([
+        _service.searchByDomainOrField(domainId: domain.id, page: 1, perPage: 25),
+        _service.searchByDomainOrField(domainId: domain.id, page: 2, perPage: 25),
+      ]);
+      final seenIds = <String>{};
+      for (final page in results) {
+        for (final pub in page) {
+          if (seenIds.add(pub.id)) _allPublications.add(pub);
+        }
+      }
+    } catch (e) {
+      _error = 'Network error. Please try again.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   List<Publication> get allPublications => _allPublications;
   bool get isLoading => _isLoading;
