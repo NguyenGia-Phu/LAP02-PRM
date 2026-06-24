@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/publication.dart';
 import '../widgets/publication_card.dart';
-import 'publication_detail_screen.dart';
+import 'home/publication_detail_screen.dart';
 
 class FilteredPublicationsScreen extends StatelessWidget {
   final String title;

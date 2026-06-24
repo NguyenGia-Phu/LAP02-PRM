@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/search_provider.dart';
+import '../viewmodels/home_viewmodel.dart';
 import 'trend_analysis_screen.dart';
-import 'publication_detail_screen.dart';
+import 'home/publication_detail_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<SearchProvider>();
+    final provider = context.watch<HomeViewModel>();
     final theme = Theme.of(context);
 
     return Scaffold(

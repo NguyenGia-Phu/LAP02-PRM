@@ -1,9 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'providers/search_provider.dart';
-import 'screens/search_screen.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'firebase/firebase_options.dart';
+import 'firebase/auth_service.dart';
+import 'viewmodels/auth_viewmodel.dart';
+import 'viewmodels/home_viewmodel.dart';
+import 'screens/login_screen.dart';
+import 'screens/main_shell_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+  } catch (e) {
+    debugPrint("Firebase initialization failed: $e");
+  }
   runApp(const JournalTrendApp());
 }
 
@@ -12,10 +28,17 @@ class JournalTrendApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => SearchProvider(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => AuthViewModel(authService: AuthService()),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => HomeViewModel(),
+        ),
+      ],
       child: MaterialApp(
-        title: 'Lab02 - PhuNG',
+        title: 'Lab03 - PhuNG',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF1565C0),
@@ -39,7 +62,22 @@ class JournalTrendApp extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
-        home: const SearchScreen(),
+        home: StreamBuilder<User?>(
+          stream: AuthService().authStateChanges,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+            if (snapshot.hasData) {
+              return const MainShellScreen();
+            }
+            return const LoginScreen();
+          },
+        ),
         debugShowCheckedModeBanner: false,
       ),
     );

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../providers/search_provider.dart';
-import 'publication_detail_screen.dart';
+import '../viewmodels/home_viewmodel.dart';
+import 'home/publication_detail_screen.dart';
 import 'filtered_publications_screen.dart';
 
 class TrendAnalysisScreen extends StatefulWidget {
@@ -30,7 +30,7 @@ class _TrendAnalysisScreenState extends State<TrendAnalysisScreen>
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<SearchProvider>();
+    final provider = context.watch<HomeViewModel>();
 
     return Scaffold(
       appBar: AppBar(
@@ -58,7 +58,7 @@ class _TrendAnalysisScreenState extends State<TrendAnalysisScreen>
 
 // --- Tab 1: Publications by Year ---
 class _PublicationsByYearTab extends StatelessWidget {
-  final SearchProvider provider;
+  final HomeViewModel provider;
   const _PublicationsByYearTab({required this.provider});
 
   @override
@@ -150,7 +150,7 @@ class _PublicationsByYearTab extends StatelessWidget {
 
 // --- Tab 2: Top Journals ---
 class _TopJournalsTab extends StatelessWidget {
-  final SearchProvider provider;
+  final HomeViewModel provider;
   const _TopJournalsTab({required this.provider});
 
   @override
@@ -237,7 +237,7 @@ class _TopJournalsTab extends StatelessWidget {
 
 // --- Tab 3: Top Authors ---
 class _TopAuthorsTab extends StatelessWidget {
-  final SearchProvider provider;
+  final HomeViewModel provider;
   const _TopAuthorsTab({required this.provider});
 
   @override
@@ -340,7 +340,7 @@ class TopInfluentialPapersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.read<SearchProvider>();
+    final provider = context.read<HomeViewModel>();
     final papers = provider.topInfluentialPapers;
 
     return Scaffold(
