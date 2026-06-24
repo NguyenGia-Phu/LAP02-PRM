@@ -53,3 +53,6 @@ node_modules/
 
 # Flutter plugins list
 .flutter-plugins
+linux/flutter/generated_plugin_registrant.cc
+*.cc
+*.cmake
