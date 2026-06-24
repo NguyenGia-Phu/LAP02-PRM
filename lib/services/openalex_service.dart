@@ -99,4 +99,36 @@ class OpenAlexService {
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     return Publication.fromJson(data);
   }
+
+  Future<List<Publication>> searchByKeyword(
+    String keyword, {
+    int page = 1,
+    int perPage = 25,
+  }) async {
+    final encoded = Uri.encodeComponent(keyword);
+    final uri = Uri.parse(
+      '$_baseUrl/works?filter=keywords.keyword:$encoded&per-page=$perPage'
+      '&page=$page&sort=cited_by_count:desc&mailto=$_email',
+    );
+    final response = await http.get(uri).timeout(_timeout);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch publications by keyword (${response.statusCode})');
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final results = data['results'] as List<dynamic>? ?? [];
+    return results.map((e) => Publication.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  List<String> getKeywordsFromPublications(List<Publication> publications) {
+    final keywords = <String>{};
+    for (final pub in publications) {
+      for (final kw in pub.keywords) {
+        final trimmed = kw.trim();
+        if (trimmed.isNotEmpty) {
+          keywords.add(trimmed);
+        }
+      }
+    }
+    return keywords.toList();
+  }
 }
