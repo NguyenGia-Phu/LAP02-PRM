@@ -52,6 +52,7 @@ dependencies:
   pdf: ^3.11.1
   printing: ^5.13.2
   path_provider: ^2.1.5
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:
@@ -62,6 +63,11 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+
+patrol:
+  app_name: Journal Trend Analyzer
+  android:
+    package_name: com.example.journal_trend_analyzer
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'home/home_screen.dart';
-import 'journals/journals_placeholder_screen.dart';
-import 'keywords/keywords_placeholder_screen.dart';
+import 'journals/journals_screen.dart';
+import 'keywords/keywords_screen.dart';
 import 'profile/profile_tab_screen.dart';
 
 class MainShellScreen extends StatefulWidget {
@@ -16,8 +16,8 @@ class _MainShellScreenState extends State<MainShellScreen> {
 
   final List<Widget> _screens = const [
     HomeScreen(),
-    JournalsPlaceholderScreen(),
-    KeywordsPlaceholderScreen(),
+    JournalsScreen(),
+    KeywordsScreen(),
     ProfileTabScreen(),
   ];
 

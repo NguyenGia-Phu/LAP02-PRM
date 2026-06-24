@@ -7,24 +7,47 @@ import 'firebase/firebase_options.dart';
 import 'firebase/auth_service.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'viewmodels/home_viewmodel.dart';
+import 'viewmodels/journals_viewmodel.dart';
+import 'viewmodels/keywords_viewmodel.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell_screen.dart';
 
+import 'firebase/fcm_service.dart';
+import 'firebase/remote_config_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  final fcmService = FcmService();
+  final remoteConfigService = RemoteConfigService();
+
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+
+    // Initialize Services
+    await remoteConfigService.initialize();
+    await fcmService.initialize();
   } catch (e) {
     debugPrint("Firebase initialization failed: $e");
   }
-  runApp(const JournalTrendApp());
+
+  runApp(JournalTrendApp(
+    fcmService: fcmService,
+    remoteConfigService: remoteConfigService,
+  ));
 }
 
 class JournalTrendApp extends StatelessWidget {
-  const JournalTrendApp({super.key});
+  final FcmService fcmService;
+  final RemoteConfigService remoteConfigService;
+
+  const JournalTrendApp({
+    super.key,
+    required this.fcmService,
+    required this.remoteConfigService,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -35,6 +58,18 @@ class JournalTrendApp extends StatelessWidget {
         ),
         ChangeNotifierProvider(
           create: (_) => HomeViewModel(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => JournalsViewModel(),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => KeywordsViewModel(),
+        ),
+        ChangeNotifierProvider.value(
+          value: fcmService,
+        ),
+        Provider.value(
+          value: remoteConfigService,
         ),
       ],
       child: MaterialApp(

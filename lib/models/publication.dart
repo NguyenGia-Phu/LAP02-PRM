@@ -7,6 +7,7 @@ class Publication {
   final String? doi;
   final String? abstractText;
   final List<Author> authors;
+  final List<String> keywords;
 
   Publication({
     required this.id,
@@ -17,6 +18,7 @@ class Publication {
     this.doi,
     this.abstractText,
     required this.authors,
+    required this.keywords,
   });
 
   factory Publication.fromJson(Map<String, dynamic> json) {
@@ -42,6 +44,39 @@ class Publication {
       abstractText = _reconstructAbstract(invertedIndex);
     }
 
+    // Parse keywords / concepts
+    List<String> keywords = [];
+    final rawKeywords = json['keywords'] as List<dynamic>?;
+    if (rawKeywords != null) {
+      keywords = rawKeywords
+          .map((k) => k['display_name'] as String? ?? '')
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    if (keywords.isEmpty) {
+      final rawConcepts = json['concepts'] as List<dynamic>?;
+      if (rawConcepts != null) {
+        keywords = rawConcepts
+            .map((c) => c['display_name'] as String? ?? '')
+            .where((s) => s.isNotEmpty)
+            .toList();
+      }
+    }
+    if (keywords.isEmpty) {
+      final text = '${json['title'] ?? ''} ${abstractText ?? ''}'.toLowerCase();
+      final words = text.replaceAll(RegExp(r'[^\w\s]'), '').split(RegExp(r'\s+'));
+      final stopWords = {
+        'the', 'a', 'an', 'and', 'of', 'to', 'in', 'for', 'with', 'on', 'at',
+        'by', 'from', 'is', 'are', 'was', 'were', 'that', 'this', 'using',
+        'used', 'use', 'proposed', 'paper', 'results', 'based', 'analysis',
+        'system', 'method', 'model'
+      };
+      keywords = words
+          .where((w) => w.length > 4 && !stopWords.contains(w))
+          .take(5)
+          .toList();
+    }
+
     return Publication(
       id: json['id'] as String? ?? '',
       title: json['title'] as String? ?? 'No Title',
@@ -51,6 +86,7 @@ class Publication {
       doi: json['doi'] as String?,
       abstractText: abstractText,
       authors: authors,
+      keywords: keywords,
     );
   }
 
