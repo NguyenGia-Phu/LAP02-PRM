@@ -67,7 +67,7 @@ dev_dependencies:
 patrol:
   app_name: Journal Trend Analyzer
   android:
-    package_name: com.example.journal_trend_analyzer
+    package_name: com.prm393.journalTrendAnalyzer
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

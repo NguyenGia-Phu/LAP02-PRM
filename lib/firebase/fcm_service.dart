@@ -28,7 +28,7 @@ class FcmNotification {
 }
 
 class FcmService extends ChangeNotifier {
-  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  late final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final List<FcmNotification> _notifications = [];
 
   List<FcmNotification> get notifications => _notifications;

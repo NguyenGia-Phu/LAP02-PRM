@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "211301973773",
+    "project_id": "thanh-27442",
+    "storage_bucket": "thanh-27442.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:211301973773:android:1c966ee0a657d222937a44",
+        "android_client_info": {
+          "package_name": "com.prm393.journalTrendAnalyzer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "211301973773-adbaq116pabnj02hvcpu1480vg3re7hu.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.prm393.journalTrendAnalyzer",
+            "certificate_hash": "0488bca81c74c31d18e05af7e1a3833ca8148331"
+          }
+        },
+        {
+          "client_id": "211301973773-3r842b8ri7tn4d46hbc1tsqrljinjoen.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDd50jLpONOCa4HEteDqiVXVrIHhjIs8OM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "211301973773-3r842b8ri7tn4d46hbc1tsqrljinjoen.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

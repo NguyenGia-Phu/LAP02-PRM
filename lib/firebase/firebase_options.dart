@@ -50,11 +50,11 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'PLACEHOLDER-API-KEY-ANDROID',
-    appId: '1:1234567890:android:placeholder',
-    messagingSenderId: '1234567890',
-    projectId: 'journal-trend-analyzer',
-    storageBucket: 'journal-trend-analyzer.appspot.com',
+    apiKey: 'AIzaSyDd50jLpONOCa4HEteDqiVXVrIHhjIs8OM',
+    appId: '1:211301973773:android:1c966ee0a657d222937a44',
+    messagingSenderId: '211301973773',
+    projectId: 'thanh-27442',
+    storageBucket: 'thanh-27442.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
