@@ -1,58 +1,80 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+﻿# OS files
 .DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
+Thumbs.db
 
-# IntelliJ related
+# Editor / IDE local settings
+.idea/
+.vscode/
 *.iml
 *.ipr
 *.iws
-.idea/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which you may wish to be included in version control, so this line
-# is commented out by default.
-#.vscode/
+# Dart / Flutter generated cache
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub/
+.pub-cache/
+build/
+coverage/
 
-# Flutter/Dart/Pub related
+# Flutter generated docs / symbols
 **/doc/api/
 **/ios/Flutter/.last_build_id
-.dart_tool/
-.flutter-plugins-dependencies
-.pub-cache/
-.pub/
-/build/
-/coverage/
-
-# Symbolication related
 app.*.symbols
-
-# Obfuscation related
 app.*.map.json
 
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Android local build/cache files
+android/.gradle/
+android/local.properties
+android/app/debug/
+android/app/profile/
+android/app/release/
+*.jks
+*.keystore
+key.properties
 
+# iOS / macOS dependency cache
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+macos/Pods/
+macos/Flutter/ephemeral/
 
-#Ignore vscode AI rules
-.github\instructions\codacy.instructions.md
+# Desktop generated build folders
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
 
-# Node modules
-node_modules/
+# Firebase local logs/cache only
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
 
-# Flutter plugins list
-.flutter-plugins
-linux/flutter/generated_plugin_registrant.cc
-*.cc
-*.cmake
+# Cloud Functions dependencies/build output only
+functions/node_modules/
+functions/lib/
+functions/.runtimeconfig.json
+
+# Generated reports, screenshots, temp outputs
+output/
+tmp/
+test-results/
+screenshots/
+*.lcov
+*.log
+
+# Local Dart/Flutter DevTools preferences
+devtools_options.yaml
+
+# Local Codex/AI workspace files
+.agents/
+skills-lock.json
+
+# Local report drafts
+PRM393_Lab03_*Report*.md
+PRM393_Lab03_Project_Report.md
+PRM393_Lab03_Test_Report.md
+*.hprof
+

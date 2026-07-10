@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../viewmodels/shared_research_selection_viewmodel.dart';
 import 'home/home_screen.dart';
 import 'journals/journals_screen.dart';
 import 'keywords/keywords_screen.dart';
@@ -14,22 +16,31 @@ class MainShellScreen extends StatefulWidget {
 class _MainShellScreenState extends State<MainShellScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    HomeScreen(),
-    JournalsScreen(),
-    KeywordsScreen(),
-    ProfileTabScreen(),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final selection = context.watch<SharedResearchSelectionViewModel>();
+    final screens = [
+      const HomeScreen(),
+      JournalsScreen(
+        selectedLabel: selection.label,
+        selectedDomainId: selection.domainId,
+        selectedFieldId: selection.fieldId,
+        selectionKey: selection.key,
+        autoLoadSelection: _currentIndex == 1,
+      ),
+      KeywordsScreen(
+        selectedLabel: selection.label,
+        selectedDomainId: selection.domainId,
+        selectedFieldId: selection.fieldId,
+        selectionKey: selection.key,
+        autoLoadSelection: _currentIndex == 2,
+      ),
+      const ProfileTabScreen(),
+    ];
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: screens),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (int index) {

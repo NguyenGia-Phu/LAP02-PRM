@@ -16,20 +16,50 @@ class JournalsViewModel extends ChangeNotifier {
   String? get error => _error;
   String get currentTopic => _currentTopic;
 
-  Future<void> loadJournals(String topic) async {
-    if (topic.trim().isEmpty) return;
+  Future<void> loadJournals(String topic) {
+    return loadJournalsForSelection(label: topic);
+  }
+
+  Future<void> loadJournalsForSelection({
+    required String label,
+    String? domainId,
+    String? fieldId,
+  }) async {
+    final normalizedLabel = label.trim();
+    if (normalizedLabel.isEmpty) return;
+
     _isLoading = true;
     _error = null;
-    _currentTopic = topic.trim();
+    _currentTopic = normalizedLabel;
     _journals = [];
     notifyListeners();
 
     try {
       final results = await Future.wait([
-        _service.searchPublicationsByPage(_currentTopic, page: 1, perPage: 25),
-        _service.searchPublicationsByPage(_currentTopic, page: 2, perPage: 25),
-        _service.searchPublicationsByPage(_currentTopic, page: 3, perPage: 25),
-        _service.searchPublicationsByPage(_currentTopic, page: 4, perPage: 25),
+        _searchPage(
+          normalizedLabel,
+          domainId: domainId,
+          fieldId: fieldId,
+          page: 1,
+        ),
+        _searchPage(
+          normalizedLabel,
+          domainId: domainId,
+          fieldId: fieldId,
+          page: 2,
+        ),
+        _searchPage(
+          normalizedLabel,
+          domainId: domainId,
+          fieldId: fieldId,
+          page: 3,
+        ),
+        _searchPage(
+          normalizedLabel,
+          domainId: domainId,
+          fieldId: fieldId,
+          page: 4,
+        ),
       ]);
 
       final allPubs = <Publication>[];
@@ -51,7 +81,10 @@ class JournalsViewModel extends ChangeNotifier {
       _journals = groups.entries.map((entry) {
         final name = entry.key;
         final list = entry.value;
-        final totalCitations = list.fold<int>(0, (sum, p) => sum + p.citationCount);
+        final totalCitations = list.fold<int>(
+          0,
+          (sum, p) => sum + p.citationCount,
+        );
         final avgCitations = list.isEmpty ? 0.0 : totalCitations / list.length;
         return JournalStats(
           name: name,
@@ -62,13 +95,43 @@ class JournalsViewModel extends ChangeNotifier {
         );
       }).toList();
 
-      _journals.sort((a, b) => b.publicationCount.compareTo(a.publicationCount));
-    } catch (e) {
-      _error = 'Network error. Please try again.';
+      _journals.sort(
+        (a, b) => b.publicationCount.compareTo(a.publicationCount),
+      );
+    } catch (e, st) {
+      debugPrint('[JournalsViewModel] loadJournals failed: $e');
+      debugPrintStack(
+        stackTrace: st,
+        label: '[JournalsViewModel] loadJournals stack',
+      );
+      _error = 'Network error: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  Future<List<Publication>> _searchPage(
+    String topic, {
+    String? domainId,
+    String? fieldId,
+    required int page,
+  }) {
+    if (fieldId != null && fieldId.isNotEmpty) {
+      return _service.searchByDomainOrField(
+        fieldId: fieldId,
+        page: page,
+        perPage: 25,
+      );
+    }
+    if (domainId != null && domainId.isNotEmpty) {
+      return _service.searchByDomainOrField(
+        domainId: domainId,
+        page: page,
+        perPage: 25,
+      );
+    }
+    return _service.searchPublicationsByPage(topic, page: page, perPage: 25);
   }
 
   void sortByPublicationCount() {

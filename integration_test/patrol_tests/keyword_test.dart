@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 import 'patrol_test_helpers.dart';
@@ -37,7 +37,7 @@ void main() {
     ).waitUntilVisible(timeout: const Duration(seconds: 30));
 
     expect($('Keyword Detail'), findsOneWidget);
-    expect($('Publication Trend'), findsWidgets);
-    expect($('Related Journals'), findsWidgets);
+    expect($('Publication Trend Over Time'), findsOneWidget);
+    expect($('Top Contributing Authors'), findsOneWidget);
   });
 }

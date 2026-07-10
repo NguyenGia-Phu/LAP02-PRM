@@ -37,7 +37,13 @@ class HomeViewModel extends ChangeNotifier {
       _suggestedTopics = results[0] as List<String>;
       _domains = results[1] as List<ResearchDomain>;
       notifyListeners();
-    } catch (_) {}
+    } catch (e, st) {
+      debugPrint('[HomeViewModel] initial data load failed: $e');
+      debugPrintStack(
+        stackTrace: st,
+        label: '[HomeViewModel] initial data stack',
+      );
+    }
   }
 
   Future<void> searchByField(ResearchField field) async {
@@ -60,8 +66,13 @@ class HomeViewModel extends ChangeNotifier {
           if (seenIds.add(pub.id)) _allPublications.add(pub);
         }
       }
-    } catch (e) {
-      _error = 'Network error. Please try again.';
+    } catch (e, st) {
+      debugPrint('[HomeViewModel] searchByField failed: $e');
+      debugPrintStack(
+        stackTrace: st,
+        label: '[HomeViewModel] searchByField stack',
+      );
+      _error = 'Network error: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -79,8 +90,16 @@ class HomeViewModel extends ChangeNotifier {
     AnalyticsService.logSearchTopic(domain.name);
     try {
       final results = await Future.wait([
-        _service.searchByDomainOrField(domainId: domain.id, page: 1, perPage: 25),
-        _service.searchByDomainOrField(domainId: domain.id, page: 2, perPage: 25),
+        _service.searchByDomainOrField(
+          domainId: domain.id,
+          page: 1,
+          perPage: 25,
+        ),
+        _service.searchByDomainOrField(
+          domainId: domain.id,
+          page: 2,
+          perPage: 25,
+        ),
       ]);
       final seenIds = <String>{};
       for (final page in results) {
@@ -88,8 +107,13 @@ class HomeViewModel extends ChangeNotifier {
           if (seenIds.add(pub.id)) _allPublications.add(pub);
         }
       }
-    } catch (e) {
-      _error = 'Network error. Please try again.';
+    } catch (e, st) {
+      debugPrint('[HomeViewModel] searchByDomain failed: $e');
+      debugPrintStack(
+        stackTrace: st,
+        label: '[HomeViewModel] searchByDomain stack',
+      );
+      _error = 'Network error: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -105,7 +129,10 @@ class HomeViewModel extends ChangeNotifier {
   int get pageSize => _pageSize;
 
   List<Publication> get publications {
-    final end = (_currentDisplayPage * _pageSize).clamp(0, _allPublications.length);
+    final end = (_currentDisplayPage * _pageSize).clamp(
+      0,
+      _allPublications.length,
+    );
     return _allPublications.sublist(0, end);
   }
 
@@ -145,20 +172,34 @@ class HomeViewModel extends ChangeNotifier {
           if (seenIds.add(pub.id)) _allPublications.add(pub);
         }
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint(
+        '[HomeViewModel] parallel search failed, retrying sequentially: $e',
+      );
+      debugPrintStack(
+        stackTrace: st,
+        label: '[HomeViewModel] parallel search stack',
+      );
       try {
         for (int page = 1; page <= 4; page++) {
           final result = await _service.searchPublicationsByPage(
-            _currentTopic, page: page, perPage: 25,
+            _currentTopic,
+            page: page,
+            perPage: 25,
           );
           final seenIds = _allPublications.map((p) => p.id).toSet();
           for (final pub in result) {
             if (!seenIds.contains(pub.id)) _allPublications.add(pub);
           }
         }
-      } catch (e2) {
+      } catch (e2, st2) {
+        debugPrint('[HomeViewModel] sequential search failed: $e2');
+        debugPrintStack(
+          stackTrace: st2,
+          label: '[HomeViewModel] sequential search stack',
+        );
         if (_allPublications.isEmpty) {
-          _error = 'Network error. Please try again.';
+          _error = 'Network error: $e2';
         }
       }
     } finally {
@@ -193,8 +234,16 @@ class HomeViewModel extends ChangeNotifier {
     final nextApiPage = (_allPublications.length / 25).floor() + 1;
     try {
       final results = await Future.wait([
-        _service.searchPublicationsByPage(_currentTopic, page: nextApiPage, perPage: 25),
-        _service.searchPublicationsByPage(_currentTopic, page: nextApiPage + 1, perPage: 25),
+        _service.searchPublicationsByPage(
+          _currentTopic,
+          page: nextApiPage,
+          perPage: 25,
+        ),
+        _service.searchPublicationsByPage(
+          _currentTopic,
+          page: nextApiPage + 1,
+          perPage: 25,
+        ),
       ]);
       final seenIds = _allPublications.map((p) => p.id).toSet();
       for (final page in results) {
@@ -202,7 +251,9 @@ class HomeViewModel extends ChangeNotifier {
           if (seenIds.add(pub.id)) _allPublications.add(pub);
         }
       }
-    } catch (_) {
+    } catch (e, st) {
+      debugPrint('[HomeViewModel] loadMoreFromApi failed: $e');
+      debugPrintStack(stackTrace: st, label: '[HomeViewModel] loadMore stack');
     } finally {
       _isLoadingMore = false;
       notifyListeners();
@@ -214,7 +265,9 @@ class HomeViewModel extends ChangeNotifier {
     for (final p in _allPublications) {
       if (p.year > 0) map[p.year] = (map[p.year] ?? 0) + 1;
     }
-    return Map.fromEntries(map.entries.toList()..sort((a, b) => a.key.compareTo(b.key)));
+    return Map.fromEntries(
+      map.entries.toList()..sort((a, b) => a.key.compareTo(b.key)),
+    );
   }
 
   List<Publication> get topInfluentialPapers {
@@ -229,7 +282,8 @@ class HomeViewModel extends ChangeNotifier {
       final j = p.journalName;
       if (j != null && j.isNotEmpty) map[j] = (map[j] ?? 0) + 1;
     }
-    final sorted = map.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final sorted = map.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     return sorted.take(10).toList();
   }
 
@@ -240,7 +294,8 @@ class HomeViewModel extends ChangeNotifier {
         if (a.name != 'Unknown') map[a.name] = (map[a.name] ?? 0) + 1;
       }
     }
-    final sorted = map.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final sorted = map.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
     return sorted.take(10).toList();
   }
 
@@ -248,7 +303,10 @@ class HomeViewModel extends ChangeNotifier {
 
   double get averageCitationCount {
     if (_allPublications.isEmpty) return 0;
-    final total = _allPublications.fold<int>(0, (sum, p) => sum + p.citationCount);
+    final total = _allPublications.fold<int>(
+      0,
+      (sum, p) => sum + p.citationCount,
+    );
     return total / _allPublications.length;
   }
 

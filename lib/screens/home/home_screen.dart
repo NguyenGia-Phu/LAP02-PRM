@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../models/publication.dart';
 import '../../viewmodels/home_viewmodel.dart';
+import '../../viewmodels/shared_research_selection_viewmodel.dart';
 import '../../widgets/publication_card.dart';
 import 'publication_detail_screen.dart';
 
@@ -31,6 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void _search(String topic) {
     if (topic.trim().isEmpty) return;
     FocusScope.of(context).unfocus();
+    context.read<SharedResearchSelectionViewModel>().setText(topic);
     context.read<HomeViewModel>().search(topic);
     _controller.text = topic;
     setState(() => _sortOption = SortOption.relevance);
@@ -38,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _clearResults() {
     context.read<HomeViewModel>().clear();
+    context.read<SharedResearchSelectionViewModel>().clear();
     _controller.clear();
     setState(() => _sortOption = SortOption.relevance);
   }
@@ -61,11 +64,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _sortLabel(SortOption opt) {
     switch (opt) {
-      case SortOption.relevance: return 'Relevance';
-      case SortOption.citationsDesc: return 'Citations ↓';
-      case SortOption.citationsAsc: return 'Citations ↑';
-      case SortOption.yearDesc: return 'Year ↓';
-      case SortOption.yearAsc: return 'Year ↑';
+      case SortOption.relevance:
+        return 'Relevance';
+      case SortOption.citationsDesc:
+        return 'Citations â†“';
+      case SortOption.citationsAsc:
+        return 'Citations â†‘';
+      case SortOption.yearDesc:
+        return 'Year â†“';
+      case SortOption.yearAsc:
+        return 'Year â†‘';
     }
   }
 
@@ -96,9 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         children: [
           _buildSearchBar(viewModel),
-          Expanded(
-            child: _buildBody(viewModel),
-          ),
+          Expanded(child: _buildBody(viewModel)),
         ],
       ),
     );
@@ -134,7 +140,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 filled: true,
                 fillColor: theme.colorScheme.surface,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 16,
+                ),
               ),
               onChanged: (val) {
                 setState(() {});
@@ -187,9 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (viewModel.allPublications.isEmpty) {
-      return const Center(
-        child: Text('No publications found for this topic.'),
-      );
+      return const Center(child: Text('No publications found for this topic.'));
     }
 
     final sortedPubs = _sorted(viewModel.publications);
@@ -231,7 +238,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildSuggestions(HomeViewModel viewModel) {
-    final isLoadingSuggestions = viewModel.domains.isEmpty && viewModel.suggestedTopics.isEmpty;
+    final isLoadingSuggestions =
+        viewModel.domains.isEmpty && viewModel.suggestedTopics.isEmpty;
 
     if (isLoadingSuggestions) {
       return const Center(child: CircularProgressIndicator());
@@ -263,7 +271,9 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Text(
           'Browse by Domain',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(
+            context,
+          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         ...viewModel.domains.map((domain) {
@@ -276,8 +286,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 backgroundColor: color.withValues(alpha: 0.15),
                 child: Icon(icon, color: color, size: 20),
               ),
-              title: Text(domain.name, style: const TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text('${domain.fields.length} fields', style: const TextStyle(fontSize: 12)),
+              title: Text(
+                domain.name,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              subtitle: Text(
+                '${domain.fields.length} fields',
+                style: const TextStyle(fontSize: 12),
+              ),
               children: [
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
@@ -289,25 +305,39 @@ class _HomeScreenState extends State<HomeScreen> {
                         avatar: Icon(icon, size: 16, color: color),
                         label: Text(
                           'All ${domain.name}',
-                          style: TextStyle(color: color, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            color: color,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         backgroundColor: color.withValues(alpha: 0.1),
                         onPressed: () {
                           FocusScope.of(context).unfocus();
+                          context
+                              .read<SharedResearchSelectionViewModel>()
+                              .setDomain(
+                                label: domain.name,
+                                domainId: domain.id,
+                              );
                           context.read<HomeViewModel>().searchByDomain(domain);
                           _controller.text = domain.name;
                           setState(() => _sortOption = SortOption.relevance);
                         },
                       ),
-                      ...domain.fields.map((field) => ActionChip(
-                            label: Text(field.name),
-                            onPressed: () {
-                              FocusScope.of(context).unfocus();
-                              context.read<HomeViewModel>().searchByField(field);
-                              _controller.text = field.name;
-                              setState(() => _sortOption = SortOption.relevance);
-                            },
-                          )),
+                      ...domain.fields.map(
+                        (field) => ActionChip(
+                          label: Text(field.name),
+                          onPressed: () {
+                            FocusScope.of(context).unfocus();
+                            context
+                                .read<SharedResearchSelectionViewModel>()
+                                .setField(label: field.name, fieldId: field.id);
+                            context.read<HomeViewModel>().searchByField(field);
+                            _controller.text = field.name;
+                            setState(() => _sortOption = SortOption.relevance);
+                          },
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -327,14 +357,19 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             'Suggested Topics',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: _fallbackSuggestions
-                .map((s) => ActionChip(label: Text(s), onPressed: () => _search(s)))
+                .map(
+                  (s) =>
+                      ActionChip(label: Text(s), onPressed: () => _search(s)),
+                )
                 .toList(),
           ),
         ],
@@ -349,7 +384,9 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Text(
           'Dashboard: ${viewModel.currentTopic}',
-          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          style: theme.textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
         ),
         const SizedBox(height: 16),
         GridView.count(
@@ -401,11 +438,14 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Colors.amber[700]!,
             label: 'Most Influential Paper',
             value: viewModel.mostInfluentialPaper!.title,
-            subtitle: 'Citations: ${viewModel.mostInfluentialPaper!.citationCount}',
+            subtitle:
+                'Citations: ${viewModel.mostInfluentialPaper!.citationCount}',
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => PublicationDetailScreen(publication: viewModel.mostInfluentialPaper!),
+                builder: (_) => PublicationDetailScreen(
+                  publication: viewModel.mostInfluentialPaper!,
+                ),
               ),
             ),
           ),
@@ -462,15 +502,26 @@ class _HomeScreenState extends State<HomeScreen> {
           backgroundColor: color,
           child: Icon(icon, color: Colors.white),
         ),
-        title: Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        title: Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14), maxLines: 2, overflow: TextOverflow.ellipsis),
-            if (subtitle != null) Text(subtitle, style: const TextStyle(fontSize: 12)),
+            Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (subtitle != null)
+              Text(subtitle, style: const TextStyle(fontSize: 12)),
           ],
         ),
-        trailing: onTap != null ? const Icon(Icons.arrow_forward_ios, size: 16) : null,
+        trailing: onTap != null
+            ? const Icon(Icons.arrow_forward_ios, size: 16)
+            : null,
         onTap: onTap,
       ),
     );
@@ -493,7 +544,9 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(
               'Publications Per Year',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 20),
             SizedBox(
@@ -521,13 +574,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         interval: 1,
                         getTitlesWidget: (value, meta) {
                           final i = value.toInt();
-                          if (i < 0 || i >= years.length) return const SizedBox.shrink();
-                          if (years.length > 10 && i % 2 != 0) return const SizedBox.shrink();
+                          if (i < 0 || i >= years.length) {
+                            return const SizedBox.shrink();
+                          }
+                          if (years.length > 10 && i % 2 != 0) {
+                            return const SizedBox.shrink();
+                          }
                           return Padding(
                             padding: const EdgeInsets.only(top: 4),
                             child: Text(
                               '${years[i]}',
-                              style: const TextStyle(fontSize: 9, color: Colors.grey),
+                              style: const TextStyle(
+                                fontSize: 9,
+                                color: Colors.grey,
+                              ),
                             ),
                           );
                         },
@@ -540,13 +600,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         getTitlesWidget: (value, meta) {
                           return Text(
                             '${value.toInt()}',
-                            style: const TextStyle(fontSize: 9, color: Colors.grey),
+                            style: const TextStyle(
+                              fontSize: 9,
+                              color: Colors.grey,
+                            ),
                           );
                         },
                       ),
                     ),
-                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
+                    rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
                   ),
                   gridData: const FlGridData(
                     show: true,
@@ -570,7 +637,9 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: Text(
                 'Publications ($displayedCount / ${viewModel.totalPublications})',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
             _buildSortMenu(),
@@ -597,9 +666,9 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(
             _sortLabel(_sortOption),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           const Icon(Icons.arrow_drop_down, size: 18),
         ],
@@ -613,28 +682,40 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         children: [
           _buildFilterChip(
-            label: 'Citations ↓',
+            label: 'Citations â†“',
             selected: _sortOption == SortOption.citationsDesc,
-            onTap: () => setState(() => _sortOption =
-                _sortOption == SortOption.citationsDesc ? SortOption.relevance : SortOption.citationsDesc),
+            onTap: () => setState(
+              () => _sortOption = _sortOption == SortOption.citationsDesc
+                  ? SortOption.relevance
+                  : SortOption.citationsDesc,
+            ),
           ),
           _buildFilterChip(
-            label: 'Citations ↑',
+            label: 'Citations â†‘',
             selected: _sortOption == SortOption.citationsAsc,
-            onTap: () => setState(() => _sortOption =
-                _sortOption == SortOption.citationsAsc ? SortOption.relevance : SortOption.citationsAsc),
+            onTap: () => setState(
+              () => _sortOption = _sortOption == SortOption.citationsAsc
+                  ? SortOption.relevance
+                  : SortOption.citationsAsc,
+            ),
           ),
           _buildFilterChip(
             label: 'Newest',
             selected: _sortOption == SortOption.yearDesc,
-            onTap: () => setState(() => _sortOption =
-                _sortOption == SortOption.yearDesc ? SortOption.relevance : SortOption.yearDesc),
+            onTap: () => setState(
+              () => _sortOption = _sortOption == SortOption.yearDesc
+                  ? SortOption.relevance
+                  : SortOption.yearDesc,
+            ),
           ),
           _buildFilterChip(
             label: 'Oldest',
             selected: _sortOption == SortOption.yearAsc,
-            onTap: () => setState(() => _sortOption =
-                _sortOption == SortOption.yearAsc ? SortOption.relevance : SortOption.yearAsc),
+            onTap: () => setState(
+              () => _sortOption = _sortOption == SortOption.yearAsc
+                  ? SortOption.relevance
+                  : SortOption.yearAsc,
+            ),
           ),
         ],
       ),
@@ -666,7 +747,9 @@ class _HomeScreenState extends State<HomeScreen> {
         children: [
           Text(
             'Page ${viewModel.currentDisplayPage} / ${viewModel.totalPages}',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: Colors.grey),
           ),
           const SizedBox(height: 8),
           Row(
@@ -703,15 +786,21 @@ class _HomeScreenState extends State<HomeScreen> {
                       height: 32,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: isCurrent ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                        color: isCurrent
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.transparent,
                       ),
                       child: Center(
                         child: Text(
                           '$page',
                           style: TextStyle(
                             fontSize: 13,
-                            fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                            color: isCurrent ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                            fontWeight: isCurrent
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isCurrent
+                                ? Colors.white
+                                : Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                       ),
@@ -733,7 +822,11 @@ class _HomeScreenState extends State<HomeScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                  SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                   SizedBox(width: 8),
                   Text('Loading more...', style: TextStyle(fontSize: 12)),
                 ],

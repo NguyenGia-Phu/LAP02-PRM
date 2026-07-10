@@ -101,7 +101,8 @@ class MockHomeViewModel extends ChangeNotifier implements HomeViewModel {
 }
 
 // Mock JournalsViewModel
-class MockJournalsViewModel extends ChangeNotifier implements JournalsViewModel {
+class MockJournalsViewModel extends ChangeNotifier
+    implements JournalsViewModel {
   @override
   List<JournalStats> get journals => [];
   @override
@@ -113,6 +114,12 @@ class MockJournalsViewModel extends ChangeNotifier implements JournalsViewModel 
   @override
   Future<void> loadJournals(String topic) async {}
   @override
+  Future<void> loadJournalsForSelection({
+    required String label,
+    String? domainId,
+    String? fieldId,
+  }) async {}
+  @override
   void sortByPublicationCount() {}
   @override
   void sortByTotalCitations() {}
@@ -123,7 +130,8 @@ class MockJournalsViewModel extends ChangeNotifier implements JournalsViewModel 
 }
 
 // Mock KeywordsViewModel
-class MockKeywordsViewModel extends ChangeNotifier implements KeywordsViewModel {
+class MockKeywordsViewModel extends ChangeNotifier
+    implements KeywordsViewModel {
   @override
   List<KeywordStats> get keywords => [];
   @override
@@ -137,6 +145,12 @@ class MockKeywordsViewModel extends ChangeNotifier implements KeywordsViewModel 
   @override
   Future<void> loadKeywords(String topic) async {}
   @override
+  Future<void> loadKeywordsForSelection({
+    required String label,
+    String? domainId,
+    String? fieldId,
+  }) async {}
+  @override
   void clear() {}
 }
 
@@ -149,7 +163,7 @@ class MockFcmService extends ChangeNotifier implements FcmService {
   @override
   Future<String?> getToken() async => 'mock-token';
   @override
-  void setupMessageHandlers() {}
+  Future<void> setupMessageHandlers() async {}
   @override
   void clearNotifications() {}
 }
@@ -167,7 +181,9 @@ class MockRemoteConfigService implements RemoteConfigService {
 }
 
 void main() {
-  testWidgets('LoginScreen renders premium widgets', (WidgetTester tester) async {
+  testWidgets('LoginScreen renders premium widgets', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ChangeNotifierProvider<AuthViewModel>.value(
@@ -182,7 +198,9 @@ void main() {
     expect(find.text('Sign in with Google'), findsOneWidget);
   });
 
-  testWidgets('HomeScreen renders initial search bar and state', (WidgetTester tester) async {
+  testWidgets('HomeScreen renders initial search bar and state', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: ChangeNotifierProvider<HomeViewModel>.value(
@@ -197,13 +215,19 @@ void main() {
     expect(find.text('Data Science'), findsOneWidget);
   });
 
-  testWidgets('JournalsScreen renders inputs and empty state', (WidgetTester tester) async {
+  testWidgets('JournalsScreen renders inputs and empty state', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: MultiProvider(
           providers: [
-            ChangeNotifierProvider<JournalsViewModel>.value(value: MockJournalsViewModel()),
-            Provider<RemoteConfigService>.value(value: MockRemoteConfigService()),
+            ChangeNotifierProvider<JournalsViewModel>.value(
+              value: MockJournalsViewModel(),
+            ),
+            Provider<RemoteConfigService>.value(
+              value: MockRemoteConfigService(),
+            ),
           ],
           child: const JournalsScreen(),
         ),
@@ -212,16 +236,25 @@ void main() {
 
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Analyze'), findsOneWidget);
-    expect(find.text('Enter a topic above to analyze publishing journals.'), findsOneWidget);
+    expect(
+      find.text('Enter a topic above to analyze publishing journals.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('KeywordsScreen renders search bar and empty state', (WidgetTester tester) async {
+  testWidgets('KeywordsScreen renders search bar and empty state', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: MultiProvider(
           providers: [
-            ChangeNotifierProvider<KeywordsViewModel>.value(value: MockKeywordsViewModel()),
-            Provider<RemoteConfigService>.value(value: MockRemoteConfigService()),
+            ChangeNotifierProvider<KeywordsViewModel>.value(
+              value: MockKeywordsViewModel(),
+            ),
+            Provider<RemoteConfigService>.value(
+              value: MockRemoteConfigService(),
+            ),
           ],
           child: const KeywordsScreen(),
         ),
@@ -230,17 +263,26 @@ void main() {
 
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Analyze'), findsOneWidget);
-    expect(find.text('Enter a topic above to analyze research keywords.'), findsOneWidget);
+    expect(
+      find.text('Enter a topic above to analyze research keywords.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('ProfileTabScreen renders profile sections', (WidgetTester tester) async {
+  testWidgets('ProfileTabScreen renders profile sections', (
+    WidgetTester tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: MultiProvider(
           providers: [
-            ChangeNotifierProvider<AuthViewModel>.value(value: MockAuthViewModel()),
+            ChangeNotifierProvider<AuthViewModel>.value(
+              value: MockAuthViewModel(),
+            ),
             ChangeNotifierProvider<FcmService>.value(value: MockFcmService()),
-            Provider<RemoteConfigService>.value(value: MockRemoteConfigService()),
+            Provider<RemoteConfigService>.value(
+              value: MockRemoteConfigService(),
+            ),
           ],
           child: const ProfileTabScreen(),
         ),

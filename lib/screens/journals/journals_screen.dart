@@ -6,7 +6,20 @@ import '../../firebase/remote_config_service.dart';
 import 'journal_detail_screen.dart';
 
 class JournalsScreen extends StatefulWidget {
-  const JournalsScreen({super.key});
+  final String selectedLabel;
+  final String? selectedDomainId;
+  final String? selectedFieldId;
+  final String selectionKey;
+  final bool autoLoadSelection;
+
+  const JournalsScreen({
+    super.key,
+    this.selectedLabel = '',
+    this.selectedDomainId,
+    this.selectedFieldId,
+    this.selectionKey = '',
+    this.autoLoadSelection = false,
+  });
 
   @override
   State<JournalsScreen> createState() => _JournalsScreenState();
@@ -15,6 +28,7 @@ class JournalsScreen extends StatefulWidget {
 class _JournalsScreenState extends State<JournalsScreen> {
   final _controller = TextEditingController();
   String _currentSort = 'Publications';
+  String _lastLoadedSelectionKey = '';
 
   final List<Color> _chartColors = [
     Colors.blue,
@@ -30,9 +44,40 @@ class _JournalsScreenState extends State<JournalsScreen> {
   ];
 
   void _search(String topic) {
-    if (topic.trim().isEmpty) return;
+    final normalized = topic.trim();
+    if (normalized.isEmpty) return;
     FocusScope.of(context).unfocus();
-    context.read<JournalsViewModel>().loadJournals(topic);
+    _controller.text = normalized;
+    _lastLoadedSelectionKey = 'manual|';
+    context.read<JournalsViewModel>().loadJournals(normalized);
+  }
+
+  void _autoLoadSelection() {
+    if (!mounted || !widget.autoLoadSelection) return;
+
+    final label = widget.selectedLabel.trim();
+    if (label.isEmpty || widget.selectionKey == _lastLoadedSelectionKey) return;
+
+    final viewModel = context.read<JournalsViewModel>();
+    _controller.text = label;
+    _lastLoadedSelectionKey = widget.selectionKey;
+    viewModel.loadJournalsForSelection(
+      label: label,
+      domainId: widget.selectedDomainId,
+      fieldId: widget.selectedFieldId,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autoLoadSelection());
+  }
+
+  @override
+  void didUpdateWidget(covariant JournalsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autoLoadSelection());
   }
 
   @override
@@ -58,6 +103,7 @@ class _JournalsScreenState extends State<JournalsScreen> {
                   onPressed: () {
                     viewModel.clear();
                     _controller.clear();
+                    _lastLoadedSelectionKey = '';
                   },
                 ),
               ]
@@ -102,7 +148,10 @@ class _JournalsScreenState extends State<JournalsScreen> {
                 ),
                 filled: true,
                 fillColor: theme.colorScheme.surface,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 16,
+                ),
               ),
               onChanged: (val) {
                 setState(() {});
@@ -157,7 +206,11 @@ class _JournalsScreenState extends State<JournalsScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.library_books, size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+              Icon(
+                Icons.library_books,
+                size: 64,
+                color: theme.colorScheme.primary.withValues(alpha: 0.3),
+              ),
               const SizedBox(height: 16),
               Text(
                 viewModel.currentTopic.isEmpty
@@ -179,7 +232,9 @@ class _JournalsScreenState extends State<JournalsScreen> {
         children: [
           Text(
             'Analysis for: ${viewModel.currentTopic}',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 16),
           _buildOverallMetrics(viewModel),
@@ -194,9 +249,17 @@ class _JournalsScreenState extends State<JournalsScreen> {
 
   Widget _buildOverallMetrics(JournalsViewModel viewModel) {
     // Calculate total publications & average citation rate across all grouped journals
-    final totalPublications = viewModel.journals.fold<int>(0, (sum, j) => sum + j.publicationCount);
-    final totalCitations = viewModel.journals.fold<int>(0, (sum, j) => sum + j.totalCitations);
-    final overallAvgCitations = totalPublications == 0 ? 0.0 : totalCitations / totalPublications;
+    final totalPublications = viewModel.journals.fold<int>(
+      0,
+      (sum, j) => sum + j.publicationCount,
+    );
+    final totalCitations = viewModel.journals.fold<int>(
+      0,
+      (sum, j) => sum + j.totalCitations,
+    );
+    final overallAvgCitations = totalPublications == 0
+        ? 0.0
+        : totalCitations / totalPublications;
 
     return Row(
       children: [
@@ -343,8 +406,15 @@ class _JournalsScreenState extends State<JournalsScreen> {
 
   Widget _buildRankedListSection(JournalsViewModel viewModel) {
     final remoteConfig = context.read<RemoteConfigService>();
-    final list = viewModel.journals.take(remoteConfig.maxJournalsDisplayed).toList();
-    final maxPubCount = list.isEmpty ? 1.0 : list.map((j) => j.publicationCount).reduce((a, b) => a > b ? a : b).toDouble();
+    final list = viewModel.journals
+        .take(remoteConfig.maxJournalsDisplayed)
+        .toList();
+    final maxPubCount = list.isEmpty
+        ? 1.0
+        : list
+              .map((j) => j.publicationCount)
+              .reduce((a, b) => a > b ? a : b)
+              .toDouble();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,19 +441,31 @@ class _JournalsScreenState extends State<JournalsScreen> {
 
             return Card(
               margin: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 leading: CircleAvatar(
                   backgroundColor: color.withValues(alpha: 0.1),
                   child: Text(
                     '${i + 1}',
-                    style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 14),
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 title: Text(
                   journal.name,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -394,9 +476,18 @@ class _JournalsScreenState extends State<JournalsScreen> {
                     children: [
                       Row(
                         children: [
-                          Text('Papers: ${journal.publicationCount}', style: const TextStyle(fontSize: 12)),
+                          Text(
+                            'Papers: ${journal.publicationCount}',
+                            style: const TextStyle(fontSize: 12),
+                          ),
                           const SizedBox(width: 12),
-                          Text('Citations: ${journal.totalCitations}', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                          Text(
+                            'Citations: ${journal.totalCitations}',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -445,8 +536,14 @@ class _JournalsScreenState extends State<JournalsScreen> {
       },
       itemBuilder: (_) => [
         const PopupMenuItem(value: 'Publications', child: Text('Publications')),
-        const PopupMenuItem(value: 'Total Citations', child: Text('Total Citations')),
-        const PopupMenuItem(value: 'Avg Citations', child: Text('Avg Citations')),
+        const PopupMenuItem(
+          value: 'Total Citations',
+          child: Text('Total Citations'),
+        ),
+        const PopupMenuItem(
+          value: 'Avg Citations',
+          child: Text('Avg Citations'),
+        ),
       ],
     );
   }

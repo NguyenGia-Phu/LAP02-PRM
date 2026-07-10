@@ -1,5 +1,16 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'firebase_options.dart';
+
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  debugPrint(
+    'Received background message: ${message.notification?.title ?? message.messageId}',
+  );
+}
 
 class FcmNotification {
   final String title;
@@ -13,12 +24,13 @@ class FcmNotification {
   });
 
   Map<String, dynamic> toJson() => {
-        'title': title,
-        'body': body,
-        'timestamp': timestamp.toIso8601String(),
-      };
+    'title': title,
+    'body': body,
+    'timestamp': timestamp.toIso8601String(),
+  };
 
-  factory FcmNotification.fromJson(Map<String, dynamic> json) => FcmNotification(
+  factory FcmNotification.fromJson(Map<String, dynamic> json) =>
+      FcmNotification(
         title: json['title'] as String? ?? 'No Title',
         body: json['body'] as String? ?? 'No Body',
         timestamp: json['timestamp'] != null
@@ -35,16 +47,14 @@ class FcmService extends ChangeNotifier {
 
   Future<void> initialize() async {
     try {
-      await _fcm.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-      );
+      await _fcm.requestPermission(alert: true, badge: true, sound: true);
+      await _fcm.subscribeToTopic('trend_updates');
 
       String? token = await getToken();
       debugPrint("FCM Token: $token");
 
-      setupMessageHandlers();
+      FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+      await setupMessageHandlers();
     } catch (e) {
       debugPrint("Error initializing FCM: $e");
     }
@@ -59,7 +69,15 @@ class FcmService extends ChangeNotifier {
     }
   }
 
-  void setupMessageHandlers() {
+  Future<void> setupMessageHandlers() async {
+    final initialMessage = await _fcm.getInitialMessage();
+    if (initialMessage != null) {
+      debugPrint(
+        'Notification launched app: ${initialMessage.notification?.title}',
+      );
+      _addNotification(initialMessage);
+    }
+
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint('Received foreground message: ${message.notification?.title}');
       _addNotification(message);
@@ -76,11 +94,7 @@ class FcmService extends ChangeNotifier {
     final body = message.notification?.body ?? 'No Body';
     _notifications.insert(
       0,
-      FcmNotification(
-        title: title,
-        body: body,
-        timestamp: DateTime.now(),
-      ),
+      FcmNotification(title: title, body: body, timestamp: DateTime.now()),
     );
     notifyListeners();
   }

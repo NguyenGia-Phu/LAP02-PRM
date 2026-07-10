@@ -6,7 +6,20 @@ import '../../firebase/remote_config_service.dart';
 import 'keyword_detail_screen.dart';
 
 class KeywordsScreen extends StatefulWidget {
-  const KeywordsScreen({super.key});
+  final String selectedLabel;
+  final String? selectedDomainId;
+  final String? selectedFieldId;
+  final String selectionKey;
+  final bool autoLoadSelection;
+
+  const KeywordsScreen({
+    super.key,
+    this.selectedLabel = '',
+    this.selectedDomainId,
+    this.selectedFieldId,
+    this.selectionKey = '',
+    this.autoLoadSelection = false,
+  });
 
   @override
   State<KeywordsScreen> createState() => _KeywordsScreenState();
@@ -14,6 +27,7 @@ class KeywordsScreen extends StatefulWidget {
 
 class _KeywordsScreenState extends State<KeywordsScreen> {
   final _controller = TextEditingController();
+  String _lastLoadedSelectionKey = '';
 
   final List<Color> _chartColors = [
     Colors.blue,
@@ -29,9 +43,40 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
   ];
 
   void _search(String topic) {
-    if (topic.trim().isEmpty) return;
+    final normalized = topic.trim();
+    if (normalized.isEmpty) return;
     FocusScope.of(context).unfocus();
-    context.read<KeywordsViewModel>().loadKeywords(topic);
+    _controller.text = normalized;
+    _lastLoadedSelectionKey = 'manual|';
+    context.read<KeywordsViewModel>().loadKeywords(normalized);
+  }
+
+  void _autoLoadSelection() {
+    if (!mounted || !widget.autoLoadSelection) return;
+
+    final label = widget.selectedLabel.trim();
+    if (label.isEmpty || widget.selectionKey == _lastLoadedSelectionKey) return;
+
+    final viewModel = context.read<KeywordsViewModel>();
+    _controller.text = label;
+    _lastLoadedSelectionKey = widget.selectionKey;
+    viewModel.loadKeywordsForSelection(
+      label: label,
+      domainId: widget.selectedDomainId,
+      fieldId: widget.selectedFieldId,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autoLoadSelection());
+  }
+
+  @override
+  void didUpdateWidget(covariant KeywordsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _autoLoadSelection());
   }
 
   @override
@@ -57,6 +102,7 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
                   onPressed: () {
                     viewModel.clear();
                     _controller.clear();
+                    _lastLoadedSelectionKey = '';
                   },
                 ),
               ]
@@ -101,7 +147,10 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
                 ),
                 filled: true,
                 fillColor: theme.colorScheme.surface,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 0,
+                  horizontal: 16,
+                ),
               ),
               onChanged: (val) {
                 setState(() {});
@@ -156,7 +205,11 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.label_important_rounded, size: 64, color: theme.colorScheme.primary.withValues(alpha: 0.3)),
+              Icon(
+                Icons.label_important_rounded,
+                size: 64,
+                color: theme.colorScheme.primary.withValues(alpha: 0.3),
+              ),
               const SizedBox(height: 16),
               Text(
                 viewModel.currentTopic.isEmpty
@@ -178,7 +231,9 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
         children: [
           Text(
             'Analysis for: ${viewModel.currentTopic}',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 16),
           _buildBarChartCard(viewModel, theme),
@@ -237,18 +292,36 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
                               showTitles: true,
                               getTitlesWidget: (value, meta) {
                                 final idx = value.toInt();
-                                if (idx < 0 || idx >= topCount) return const SizedBox.shrink();
-                                return Text('#${idx + 1}', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold));
+                                if (idx < 0 || idx >= topCount) {
+                                  return const SizedBox.shrink();
+                                }
+                                return Text(
+                                  '#${idx + 1}',
+                                  style: const TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                );
                               },
                             ),
                           ),
                           leftTitles: const AxisTitles(
-                            sideTitles: SideTitles(showTitles: true, reservedSize: 28),
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 28,
+                            ),
                           ),
-                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
+                          rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false),
+                          ),
                         ),
-                        gridData: const FlGridData(show: true, drawVerticalLine: false),
+                        gridData: const FlGridData(
+                          show: true,
+                          drawVerticalLine: false,
+                        ),
                         borderData: FlBorderData(show: false),
                       ),
                     ),
@@ -266,21 +339,31 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
                         child: Row(
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
                                 color: _chartColors[i % _chartColors.length],
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
                                 '#${i + 1}',
-                                style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
                             const SizedBox(width: 6),
                             Expanded(
                               child: Text(
                                 kw.keyword,
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -338,9 +421,15 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
                   width: 150,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primaryContainer.withValues(alpha: 0.15),
+                    color: theme.colorScheme.primaryContainer.withValues(
+                      alpha: 0.15,
+                    ),
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3)),
+                    border: Border.all(
+                      color: theme.colorScheme.primaryContainer.withValues(
+                        alpha: 0.3,
+                      ),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,18 +437,28 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
                     children: [
                       Text(
                         kw.keyword,
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.arrow_upward, color: Colors.green, size: 14),
+                          Icon(
+                            Icons.arrow_upward,
+                            color: Colors.green,
+                            size: 14,
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'Freq: ${kw.frequency}',
-                            style: const TextStyle(fontSize: 10, color: Colors.grey),
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                            ),
                           ),
                         ],
                       ),
@@ -376,7 +475,9 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
 
   Widget _buildRankedListSection(KeywordsViewModel viewModel, ThemeData theme) {
     final remoteConfig = context.read<RemoteConfigService>();
-    final list = viewModel.keywords.take(remoteConfig.maxKeywordsDisplayed).toList();
+    final list = viewModel.keywords
+        .take(remoteConfig.maxKeywordsDisplayed)
+        .toList();
     final maxFreq = list.isEmpty ? 1.0 : list.first.frequency.toDouble();
 
     return Column(
@@ -398,23 +499,34 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
 
             return Card(
               margin: EdgeInsets.zero,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 leading: CircleAvatar(
                   backgroundColor: color.withValues(alpha: 0.1),
                   child: Icon(Icons.tag, color: color, size: 18),
                 ),
                 title: Text(
                   kw.keyword,
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                  ),
                 ),
                 subtitle: Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Occurrences: ${kw.frequency}', style: const TextStyle(fontSize: 12)),
+                      Text(
+                        'Occurrences: ${kw.frequency}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
                       const SizedBox(height: 6),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),

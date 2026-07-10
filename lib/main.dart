@@ -11,6 +11,7 @@ import 'viewmodels/auth_viewmodel.dart';
 import 'viewmodels/home_viewmodel.dart';
 import 'viewmodels/journals_viewmodel.dart';
 import 'viewmodels/keywords_viewmodel.dart';
+import 'viewmodels/shared_research_selection_viewmodel.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell_screen.dart';
 
@@ -33,18 +34,22 @@ class _AppBootstrapState extends State<AppBootstrap> {
   late final Future<_FirebaseServices> _servicesFuture = _initializeApp();
 
   Future<_FirebaseServices> _initializeApp() async {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
     final fcmService = FcmService();
     final remoteConfigService = RemoteConfigService();
 
-    unawaited(_initializeFirebaseServices(
-      fcmService: fcmService,
-      remoteConfigService: remoteConfigService,
-    ));
+    unawaited(
+      _initializeFirebaseServices(
+        fcmService: fcmService,
+        remoteConfigService: remoteConfigService,
+      ),
+    );
 
     return _FirebaseServices(
       fcmService: fcmService,
@@ -134,21 +139,14 @@ class JournalTrendApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => AuthViewModel(authService: AuthService()),
         ),
+        ChangeNotifierProvider(create: (_) => HomeViewModel()),
+        ChangeNotifierProvider(create: (_) => JournalsViewModel()),
+        ChangeNotifierProvider(create: (_) => KeywordsViewModel()),
         ChangeNotifierProvider(
-          create: (_) => HomeViewModel(),
+          create: (_) => SharedResearchSelectionViewModel(),
         ),
-        ChangeNotifierProvider(
-          create: (_) => JournalsViewModel(),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => KeywordsViewModel(),
-        ),
-        ChangeNotifierProvider.value(
-          value: fcmService,
-        ),
-        Provider.value(
-          value: remoteConfigService,
-        ),
+        ChangeNotifierProvider.value(value: fcmService),
+        Provider.value(value: remoteConfigService),
       ],
       child: MaterialApp(
         title: 'Lab03 - PhuNG',
@@ -189,9 +187,7 @@ class JournalTrendApp extends StatelessWidget {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Scaffold(
                 backgroundColor: Colors.white,
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
+                body: Center(child: CircularProgressIndicator()),
               );
             }
             return const LoginScreen();

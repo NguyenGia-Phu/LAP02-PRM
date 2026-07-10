@@ -18,21 +18,51 @@ class KeywordsViewModel extends ChangeNotifier {
   String? get error => _error;
   String get currentTopic => _currentTopic;
 
-  Future<void> loadKeywords(String topic) async {
-    if (topic.trim().isEmpty) return;
+  Future<void> loadKeywords(String topic) {
+    return loadKeywordsForSelection(label: topic);
+  }
+
+  Future<void> loadKeywordsForSelection({
+    required String label,
+    String? domainId,
+    String? fieldId,
+  }) async {
+    final normalizedLabel = label.trim();
+    if (normalizedLabel.isEmpty) return;
+
     _isLoading = true;
     _error = null;
-    _currentTopic = topic.trim();
+    _currentTopic = normalizedLabel;
     _keywords = [];
     _trendingKeywords = [];
     notifyListeners();
 
     try {
       final results = await Future.wait([
-        _service.searchPublicationsByPage(_currentTopic, page: 1, perPage: 25),
-        _service.searchPublicationsByPage(_currentTopic, page: 2, perPage: 25),
-        _service.searchPublicationsByPage(_currentTopic, page: 3, perPage: 25),
-        _service.searchPublicationsByPage(_currentTopic, page: 4, perPage: 25),
+        _searchPage(
+          normalizedLabel,
+          domainId: domainId,
+          fieldId: fieldId,
+          page: 1,
+        ),
+        _searchPage(
+          normalizedLabel,
+          domainId: domainId,
+          fieldId: fieldId,
+          page: 2,
+        ),
+        _searchPage(
+          normalizedLabel,
+          domainId: domainId,
+          fieldId: fieldId,
+          page: 3,
+        ),
+        _searchPage(
+          normalizedLabel,
+          domainId: domainId,
+          fieldId: fieldId,
+          page: 4,
+        ),
       ]);
 
       final allPubs = <Publication>[];
@@ -43,7 +73,6 @@ class KeywordsViewModel extends ChangeNotifier {
         }
       }
 
-      // Group publications by keyword
       final keywordMap = <String, List<Publication>>{};
       for (final pub in allPubs) {
         final extracted = _service.getKeywordsFromPublications([pub]);
@@ -55,19 +84,16 @@ class KeywordsViewModel extends ChangeNotifier {
         }
       }
 
-      // Compute statistics for each keyword
       final tempKeywords = <KeywordStats>[];
       for (final entry in keywordMap.entries) {
         final word = entry.key;
         final list = entry.value;
 
-        // trendByYear
         final trend = <int, int>{};
         for (final p in list) {
           trend[p.year] = (trend[p.year] ?? 0) + 1;
         }
 
-        // relatedJournals
         final journals = list
             .map((p) => p.journalName)
             .where((name) => name != null && name.isNotEmpty)
@@ -75,7 +101,6 @@ class KeywordsViewModel extends ChangeNotifier {
             .toSet()
             .toList();
 
-        // authorPublicationCounts
         final authorCounts = <String, int>{};
         for (final p in list) {
           for (final a in p.authors) {
@@ -97,11 +122,9 @@ class KeywordsViewModel extends ChangeNotifier {
         );
       }
 
-      // Sort by frequency descending for overall list
       tempKeywords.sort((a, b) => b.frequency.compareTo(a.frequency));
       _keywords = tempKeywords;
 
-      // Identify trending keywords based on recent growth (last 2 years vs previous 2 years)
       int maxYear = DateTime.now().year;
       if (allPubs.isNotEmpty) {
         maxYear = allPubs.map((p) => p.year).reduce((a, b) => a > b ? a : b);
@@ -109,15 +132,20 @@ class KeywordsViewModel extends ChangeNotifier {
 
       final tempTrending = List<KeywordStats>.from(tempKeywords);
       tempTrending.sort((a, b) {
-        final recentA = (a.trendByYear[maxYear] ?? 0) + (a.trendByYear[maxYear - 1] ?? 0);
-        final pastA = (a.trendByYear[maxYear - 2] ?? 0) + (a.trendByYear[maxYear - 3] ?? 0);
+        final recentA =
+            (a.trendByYear[maxYear] ?? 0) + (a.trendByYear[maxYear - 1] ?? 0);
+        final pastA =
+            (a.trendByYear[maxYear - 2] ?? 0) +
+            (a.trendByYear[maxYear - 3] ?? 0);
         final scoreA = recentA - pastA;
 
-        final recentB = (b.trendByYear[maxYear] ?? 0) + (b.trendByYear[maxYear - 1] ?? 0);
-        final pastB = (b.trendByYear[maxYear - 2] ?? 0) + (b.trendByYear[maxYear - 3] ?? 0);
+        final recentB =
+            (b.trendByYear[maxYear] ?? 0) + (b.trendByYear[maxYear - 1] ?? 0);
+        final pastB =
+            (b.trendByYear[maxYear - 2] ?? 0) +
+            (b.trendByYear[maxYear - 3] ?? 0);
         final scoreB = recentB - pastB;
 
-        // If growth score is equal, sort by overall frequency
         if (scoreB == scoreA) {
           return b.frequency.compareTo(a.frequency);
         }
@@ -125,20 +153,51 @@ class KeywordsViewModel extends ChangeNotifier {
       });
 
       _trendingKeywords = tempTrending;
-    } catch (e) {
-      _error = 'Network error. Please try again.';
+    } catch (e, st) {
+      debugPrint('[KeywordsViewModel] loadKeywords failed: $e');
+      debugPrintStack(
+        stackTrace: st,
+        label: '[KeywordsViewModel] loadKeywords stack',
+      );
+      _error = 'Network error: $e';
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
+  Future<List<Publication>> _searchPage(
+    String topic, {
+    String? domainId,
+    String? fieldId,
+    required int page,
+  }) {
+    if (fieldId != null && fieldId.isNotEmpty) {
+      return _service.searchByDomainOrField(
+        fieldId: fieldId,
+        page: page,
+        perPage: 25,
+      );
+    }
+    if (domainId != null && domainId.isNotEmpty) {
+      return _service.searchByDomainOrField(
+        domainId: domainId,
+        page: page,
+        perPage: 25,
+      );
+    }
+    return _service.searchPublicationsByPage(topic, page: page, perPage: 25);
+  }
+
   String _toTitleCase(String text) {
     if (text.isEmpty) return text;
-    return text.split(' ').map((word) {
-      if (word.isEmpty) return word;
-      return word[0].toUpperCase() + word.substring(1).toLowerCase();
-    }).join(' ');
+    return text
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return word;
+          return word[0].toUpperCase() + word.substring(1).toLowerCase();
+        })
+        .join(' ');
   }
 
   void clear() {

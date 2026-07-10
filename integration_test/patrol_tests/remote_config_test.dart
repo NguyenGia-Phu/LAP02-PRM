@@ -18,6 +18,8 @@ void main() {
       await $(
         'Remote config refreshed!',
       ).waitUntilVisible(timeout: const Duration(seconds: 30));
+
+      await pauseForEvidence();
     },
   );
 }
