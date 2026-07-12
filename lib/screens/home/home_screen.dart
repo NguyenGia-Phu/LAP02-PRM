@@ -67,13 +67,13 @@ class _HomeScreenState extends State<HomeScreen> {
       case SortOption.relevance:
         return 'Relevance';
       case SortOption.citationsDesc:
-        return 'Citations â†“';
+        return 'Citations ↓';
       case SortOption.citationsAsc:
-        return 'Citations â†‘';
+        return 'Citations ↑';
       case SortOption.yearDesc:
-        return 'Year â†“';
+        return 'Year ↓';
       case SortOption.yearAsc:
-        return 'Year â†‘';
+        return 'Year ↑';
     }
   }
 
@@ -682,7 +682,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         children: [
           _buildFilterChip(
-            label: 'Citations â†“',
+            label: 'Citations ↓',
             selected: _sortOption == SortOption.citationsDesc,
             onTap: () => setState(
               () => _sortOption = _sortOption == SortOption.citationsDesc
@@ -691,7 +691,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           _buildFilterChip(
-            label: 'Citations â†‘',
+            label: 'Citations ↑',
             selected: _sortOption == SortOption.citationsAsc,
             onTap: () => setState(
               () => _sortOption = _sortOption == SortOption.citationsAsc
