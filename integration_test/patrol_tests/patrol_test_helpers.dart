@@ -5,6 +5,17 @@ import 'package:journal_trend_analyzer/main.dart' as app;
 
 const defaultTopic = 'machine learning';
 const googleAccountText = 'ndanthanh161@gmail.com';
+const postTestDisplayDelay = Duration(seconds: 3);
+
+void patrolTestWithDelay(String description, PatrolTesterCallback callback) {
+  patrolTest(description, ($) async {
+    try {
+      await callback($);
+    } finally {
+      await Future<void>.delayed(postTestDisplayDelay);
+    }
+  });
+}
 
 Future<void> launchApp(PatrolIntegrationTester $) async {
   await $.pumpWidgetAndSettle(const app.AppBootstrap());
@@ -103,8 +114,4 @@ Future<void> openProfileTab(PatrolIntegrationTester $) async {
   await $(
     'Researcher Profile',
   ).waitUntilVisible(timeout: const Duration(seconds: 30));
-}
-
-Future<void> pauseForEvidence() async {
-  await Future<void>.delayed(const Duration(seconds: 5));
 }

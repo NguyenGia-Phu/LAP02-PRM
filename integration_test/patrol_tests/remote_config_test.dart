@@ -3,7 +3,7 @@ import 'package:patrol/patrol.dart';
 import 'patrol_test_helpers.dart';
 
 void main() {
-  patrolTest(
+  patrolTestWithDelay(
     'TC10: Remote Config retrieves and displays configuration values',
     ($) async {
       await launchAndSignIn($);
@@ -18,8 +18,6 @@ void main() {
       await $(
         'Remote config refreshed!',
       ).waitUntilVisible(timeout: const Duration(seconds: 30));
-
-      await pauseForEvidence();
     },
   );
 }

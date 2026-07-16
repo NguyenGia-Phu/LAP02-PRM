@@ -3,7 +3,7 @@ import 'package:patrol/patrol.dart';
 import 'patrol_test_helpers.dart';
 
 void main() {
-  patrolTest('TC8: Profile Navigation displays user profile information', (
+  patrolTestWithDelay('TC8: Profile Navigation displays user profile information', (
     $,
   ) async {
     await launchAndSignIn($);

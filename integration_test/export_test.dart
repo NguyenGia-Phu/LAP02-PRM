@@ -4,7 +4,7 @@ import 'package:patrol/patrol.dart';
 import 'patrol_test_helpers.dart';
 
 void main() {
-  patrolTest('TC9: PDF Export uploads report and displays download URL', (
+  patrolTestWithDelay('TC9: PDF Export uploads report and displays download URL', (
     $,
   ) async {
     await launchAndSignIn($);

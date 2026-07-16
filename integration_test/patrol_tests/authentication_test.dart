@@ -3,7 +3,7 @@ import 'package:patrol/patrol.dart';
 import 'patrol_test_helpers.dart';
 
 void main() {
-  patrolTest('TC1: Google Sign-In navigates to Home screen', ($) async {
+  patrolTestWithDelay('TC1: Google Sign-In navigates to Home screen', ($) async {
     await launchAndSignIn($);
 
     expect($('Journal Trend Analyzer'), findsOneWidget);
@@ -13,7 +13,7 @@ void main() {
     expect($('Profile'), findsOneWidget);
   });
 
-  patrolTest('TC11: Logout redirects to Login screen', ($) async {
+  patrolTestWithDelay('TC11: Logout redirects to Login screen', ($) async {
     await launchAndSignIn($);
     await openProfileTab($);
 

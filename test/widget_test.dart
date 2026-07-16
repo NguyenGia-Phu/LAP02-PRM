@@ -156,8 +156,22 @@ class MockKeywordsViewModel extends ChangeNotifier
 
 // Mock FcmService
 class MockFcmService extends ChangeNotifier implements FcmService {
+  final List<FcmNotification> _notifications = [
+    FcmNotification(
+      title: 'New trending research topic',
+      body: 'A publication is trending in machine learning.',
+      timestamp: DateTime(2026, 7, 16, 10, 30),
+      type: 'trending_topic',
+      topic: 'machine learning',
+      publicationTitle: 'A publication',
+      publicationId: 'https://openalex.org/W123',
+      citations: 42,
+      publicationYear: 2026,
+    ),
+  ];
+
   @override
-  List<FcmNotification> get notifications => [];
+  List<FcmNotification> get notifications => _notifications;
   @override
   Future<void> initialize() async {}
   @override
@@ -165,7 +179,10 @@ class MockFcmService extends ChangeNotifier implements FcmService {
   @override
   Future<void> setupMessageHandlers() async {}
   @override
-  void clearNotifications() {}
+  void clearNotifications() {
+    _notifications.clear();
+    notifyListeners();
+  }
 }
 
 // Mock RemoteConfigService
@@ -292,6 +309,8 @@ void main() {
     expect(find.text('Researcher Profile'), findsOneWidget);
     expect(find.text('Sign Out'), findsOneWidget);
     expect(find.text('Notification Center'), findsOneWidget);
+    expect(find.text('machine learning'), findsOneWidget);
+    expect(find.text('Tap to explore related publications'), findsOneWidget);
     expect(find.text('Export Trend Report'), findsOneWidget);
     expect(find.text('Remote Config Values'), findsOneWidget);
     expect(find.text('Crashlytics Diagnostics'), findsOneWidget);

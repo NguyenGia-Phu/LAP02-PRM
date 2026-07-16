@@ -16,17 +16,35 @@ class FcmNotification {
   final String title;
   final String body;
   final DateTime timestamp;
+  final String? type;
+  final String? topic;
+  final String? publicationTitle;
+  final String? publicationId;
+  final int? citations;
+  final int? publicationYear;
 
   FcmNotification({
     required this.title,
     required this.body,
     required this.timestamp,
+    this.type,
+    this.topic,
+    this.publicationTitle,
+    this.publicationId,
+    this.citations,
+    this.publicationYear,
   });
 
   Map<String, dynamic> toJson() => {
     'title': title,
     'body': body,
     'timestamp': timestamp.toIso8601String(),
+    'type': type,
+    'topic': topic,
+    'publicationTitle': publicationTitle,
+    'publicationId': publicationId,
+    'citations': citations,
+    'publicationYear': publicationYear,
   };
 
   factory FcmNotification.fromJson(Map<String, dynamic> json) =>
@@ -36,7 +54,18 @@ class FcmNotification {
         timestamp: json['timestamp'] != null
             ? DateTime.parse(json['timestamp'] as String)
             : DateTime.now(),
+        type: json['type'] as String?,
+        topic: json['topic'] as String?,
+        publicationTitle: json['publicationTitle'] as String?,
+        publicationId: json['publicationId'] as String?,
+        citations: _parseInt(json['citations']),
+        publicationYear: _parseInt(json['publicationYear']),
       );
+
+  static int? _parseInt(dynamic value) {
+    if (value is int) return value;
+    return int.tryParse(value?.toString() ?? '');
+  }
 }
 
 class FcmService extends ChangeNotifier {
@@ -92,9 +121,20 @@ class FcmService extends ChangeNotifier {
   void _addNotification(RemoteMessage message) {
     final title = message.notification?.title ?? 'No Title';
     final body = message.notification?.body ?? 'No Body';
+    final data = message.data;
     _notifications.insert(
       0,
-      FcmNotification(title: title, body: body, timestamp: DateTime.now()),
+      FcmNotification(
+        title: title,
+        body: body,
+        timestamp: DateTime.now(),
+        type: data['type'],
+        topic: data['topic'],
+        publicationTitle: data['publicationTitle'],
+        publicationId: data['publicationId'],
+        citations: FcmNotification._parseInt(data['citations']),
+        publicationYear: FcmNotification._parseInt(data['publicationYear']),
+      ),
     );
     notifyListeners();
   }

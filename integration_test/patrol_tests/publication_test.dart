@@ -4,7 +4,7 @@ import 'package:patrol/patrol.dart';
 import 'patrol_test_helpers.dart';
 
 void main() {
-  patrolTest('TC2: Topic Search displays publication results', ($) async {
+  patrolTestWithDelay('TC2: Topic Search displays publication results', ($) async {
     await launchAndSignIn($);
     await searchTopic($, defaultTopic);
 
@@ -13,7 +13,7 @@ void main() {
     expect(find.textContaining('Total Publications'), findsWidgets);
   });
 
-  patrolTest('TC3: Publication Details displays publication information', (
+  patrolTestWithDelay('TC3: Publication Details displays publication information', (
     $,
   ) async {
     await launchAndSignIn($);

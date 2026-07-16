@@ -12,6 +12,7 @@ import '../../services/openalex_service.dart';
 import '../../utils/pdf_generator.dart';
 import '../../models/journal_stats.dart';
 import '../../models/publication.dart';
+import '../filtered_publications_screen.dart';
 
 class ProfileTabScreen extends StatefulWidget {
   const ProfileTabScreen({super.key});
@@ -56,8 +57,9 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
       final totalPubs = publications.length;
 
       // Calculate avg citations
-      final totalCitations =
-          publications.map((p) => p.citationCount).fold(0, (a, b) => a + b);
+      final totalCitations = publications
+          .map((p) => p.citationCount)
+          .fold(0, (a, b) => a + b);
       final avgCitations = totalPubs > 0 ? totalCitations / totalPubs : 0.0;
 
       // Calculate most active year
@@ -83,8 +85,9 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
       final topJournals = journalMap.entries.map((entry) {
         final name = entry.key;
         final list = entry.value;
-        final jCitations =
-            list.map((p) => p.citationCount).fold(0, (a, b) => a + b);
+        final jCitations = list
+            .map((p) => p.citationCount)
+            .fold(0, (a, b) => a + b);
         return JournalStats(
           name: name,
           publicationCount: list.length,
@@ -93,12 +96,15 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
           publications: list,
         );
       }).toList();
-      topJournals
-          .sort((a, b) => b.publicationCount.compareTo(a.publicationCount));
+      topJournals.sort(
+        (a, b) => b.publicationCount.compareTo(a.publicationCount),
+      );
 
       // Calculate top publications
       final topPublications = List<Publication>.from(publications);
-      topPublications.sort((a, b) => b.citationCount.compareTo(a.citationCount));
+      topPublications.sort(
+        (a, b) => b.citationCount.compareTo(a.citationCount),
+      );
 
       // Generate PDF
       final pdfBytes = await PdfGenerator.generateReport(
@@ -126,15 +132,16 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Report generated and uploaded successfully!')),
+            content: Text('Report generated and uploaded successfully!'),
+          ),
         );
       }
     } catch (e) {
       debugPrint("Export PDF error: $e");
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to export report: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to export report: $e')));
       }
     } finally {
       setState(() {
@@ -144,19 +151,85 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
   }
 
   Future<void> _openUrl(String urlString) async {
-    final url = Uri.parse(urlString);
+    final url = Uri.tryParse(urlString);
+    if (url == null || (url.scheme != 'http' && url.scheme != 'https')) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Invalid PDF URL')));
+      }
+      return;
+    }
+
     try {
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        throw 'Could not launch URL';
+      final launched = await launchUrl(
+        url,
+        mode: LaunchMode.externalApplication,
+      );
+      if (!launched) {
+        throw Exception('No application could open the PDF link');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error opening URL: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error opening URL: $e')));
       }
+    }
+  }
+
+  Future<void> _openNotificationTopic(FcmNotification notification) async {
+    final topic = notification.topic?.trim();
+    if (topic == null || topic.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('This notification has no topic details')),
+      );
+      return;
+    }
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        content: Row(
+          children: [
+            const SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            const SizedBox(width: 16),
+            Expanded(child: Text('Loading publications about $topic...')),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final publications = await OpenAlexService().searchPublications(
+        topic,
+        perPage: 20,
+      );
+      if (!mounted) return;
+
+      Navigator.of(context, rootNavigator: true).pop();
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => FilteredPublicationsScreen(
+            title: 'Trending Topic',
+            subtitle: topic,
+            publications: publications,
+            headerIcon: Icons.trending_up_rounded,
+            headerColor: Colors.deepOrange,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not load topic information: $e')),
+      );
     }
   }
 
@@ -204,7 +277,11 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
     );
   }
 
-  Widget _buildUserInfoCard(dynamic user, AuthViewModel authVM, ColorScheme colorScheme) {
+  Widget _buildUserInfoCard(
+    dynamic user,
+    AuthViewModel authVM,
+    ColorScheme colorScheme,
+  ) {
     return Card(
       elevation: 0,
       color: colorScheme.primaryContainer.withOpacity(0.2),
@@ -248,10 +325,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                       const SizedBox(height: 4),
                       Text(
                         user?.email ?? 'No email available',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -285,7 +359,10 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
     );
   }
 
-  Widget _buildNotificationCenter(FcmService fcmService, ColorScheme colorScheme) {
+  Widget _buildNotificationCenter(
+    FcmService fcmService,
+    ColorScheme colorScheme,
+  ) {
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -299,13 +376,18 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.notifications_active_rounded,
-                        color: colorScheme.primary, size: 22),
+                    Icon(
+                      Icons.notifications_active_rounded,
+                      color: colorScheme.primary,
+                      size: 22,
+                    ),
                     const SizedBox(width: 8),
                     const Text(
                       "Notification Center",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ],
                 ),
@@ -323,8 +405,11 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                 child: Center(
                   child: Column(
                     children: [
-                      Icon(Icons.notifications_none_rounded,
-                          size: 40, color: Colors.grey.withOpacity(0.4)),
+                      Icon(
+                        Icons.notifications_none_rounded,
+                        size: 40,
+                        color: Colors.grey.withOpacity(0.4),
+                      ),
                       const SizedBox(height: 8),
                       const Text(
                         "No notifications received yet",
@@ -342,35 +427,104 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                 separatorBuilder: (context, index) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   final notif = fcmService.notifications[index];
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                notif.title,
+                  final hasTopic = notif.topic?.trim().isNotEmpty ?? false;
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: hasTopic
+                        ? () => _openNotificationTopic(notif)
+                        : null,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 10,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  notif.title,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                notif.timestamp.toString().substring(11, 16),
                                 style: const TextStyle(
-                                    fontWeight: FontWeight.bold, fontSize: 13),
+                                  fontSize: 10,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              if (hasTopic) ...[
+                                const SizedBox(width: 4),
+                                const Icon(
+                                  Icons.chevron_right_rounded,
+                                  size: 18,
+                                  color: Colors.grey,
+                                ),
+                              ],
+                            ],
+                          ),
+                          if (hasTopic) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.primaryContainer,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.trending_up_rounded,
+                                    size: 15,
+                                    color: colorScheme.onPrimaryContainer,
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Flexible(
+                                    child: Text(
+                                      notif.topic!,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                        color: colorScheme.onPrimaryContainer,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
+                          ],
+                          const SizedBox(height: 6),
+                          Text(
+                            notif.body,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          if (hasTopic) ...[
+                            const SizedBox(height: 5),
                             Text(
-                              notif.timestamp.toString().substring(11, 16),
-                              style: const TextStyle(
-                                  fontSize: 10, color: Colors.grey),
+                              'Tap to explore related publications',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          notif.body,
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.grey[600]),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -392,13 +546,15 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
           children: [
             Row(
               children: [
-                const Icon(Icons.picture_as_pdf_rounded,
-                    color: Colors.orange, size: 22),
+                const Icon(
+                  Icons.picture_as_pdf_rounded,
+                  color: Colors.orange,
+                  size: 22,
+                ),
                 const SizedBox(width: 8),
                 const Text(
                   "Export Trend Report",
-                  style:
-                      TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
               ],
             ),
@@ -411,7 +567,9 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -451,8 +609,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
               const SizedBox(height: 8),
               const Text(
                 "Export Link Available:",
-                style: TextStyle(
-                    fontWeight: FontWeight.bold, fontSize: 12),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               ),
               const SizedBox(height: 8),
               Row(
@@ -468,7 +625,9 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                       child: Text(
                         _exportUrl!,
                         style: const TextStyle(
-                            fontSize: 10, overflow: TextOverflow.ellipsis),
+                          fontSize: 10,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                   ),
@@ -485,7 +644,8 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                       Clipboard.setData(ClipboardData(text: _exportUrl!));
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text('Link copied to clipboard!')),
+                          content: Text('Link copied to clipboard!'),
+                        ),
                       );
                     },
                     tooltip: 'Copy Link',
@@ -500,7 +660,9 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
   }
 
   Widget _buildRemoteConfigSection(
-      RemoteConfigService remoteConfig, ColorScheme colorScheme) {
+    RemoteConfigService remoteConfig,
+    ColorScheme colorScheme,
+  ) {
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -514,13 +676,14 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.tune_rounded,
-                        color: Colors.teal[700], size: 22),
+                    Icon(Icons.tune_rounded, color: Colors.teal[700], size: 22),
                     const SizedBox(width: 8),
                     const Text(
                       "Remote Config Values",
-                      style:
-                          TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
                   ],
                 ),
@@ -532,7 +695,8 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text('Remote config refreshed!')),
+                          content: Text('Remote config refreshed!'),
+                        ),
                       );
                     }
                   },
@@ -575,9 +739,10 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
             child: Text(
               value,
               style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  color: Colors.black87),
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+                color: Colors.black87,
+              ),
             ),
           ),
         ],
@@ -596,13 +761,15 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
           children: [
             Row(
               children: [
-                Icon(Icons.bug_report_rounded,
-                    color: Colors.red[700], size: 22),
+                Icon(
+                  Icons.bug_report_rounded,
+                  color: Colors.red[700],
+                  size: 22,
+                ),
                 const SizedBox(width: 8),
                 const Text(
                   "Crashlytics Diagnostics",
-                  style:
-                      TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                 ),
               ],
             ),
@@ -614,13 +781,15 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                     onPressed: () async {
                       try {
                         throw Exception(
-                            "Handled diagnostic test exception - ${DateTime.now()}");
+                          "Handled diagnostic test exception - ${DateTime.now()}",
+                        );
                       } catch (e, stack) {
                         await CrashlyticsService.logHandledException(e, stack);
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                                content: Text('Handled Exception logged!')),
+                              content: Text('Handled Exception logged!'),
+                            ),
                           );
                         }
                       }
@@ -637,7 +806,10 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                     child: const Text(
                       "Log Exception",
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -659,7 +831,10 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
                     child: const Text(
                       "Trigger App Crash",
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),

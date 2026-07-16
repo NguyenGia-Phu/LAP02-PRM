@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import '../models/publication.dart';
 import '../models/journal_stats.dart';
 
@@ -13,7 +14,14 @@ class PdfGenerator {
     required List<JournalStats> topJournals,
     required List<Publication> topPublications,
   }) async {
-    final pdf = pw.Document();
+    final regularFont = await PdfGoogleFonts.notoSansRegular();
+    final boldFont = await PdfGoogleFonts.notoSansBold();
+    final pdf = pw.Document(
+      theme: pw.ThemeData.withFont(
+        base: regularFont,
+        bold: boldFont,
+      ),
+    );
 
     pdf.addPage(
       pw.MultiPage(
@@ -75,11 +83,8 @@ class PdfGenerator {
                   'Avg Citations'
                 ],
                 data: topJournals.take(5).map((j) {
-                  // Clean name to prevent PDF encoding issues
-                  final cleanName =
-                      j.name.replaceAll(RegExp(r'[^\x00-\x7F]'), '?');
                   return [
-                    cleanName,
+                    j.name,
                     '${j.publicationCount}',
                     '${j.totalCitations}',
                     j.avgCitations.toStringAsFixed(1),
@@ -96,15 +101,11 @@ class PdfGenerator {
                       fontSize: 14, fontWeight: pw.FontWeight.bold)),
               pw.SizedBox(height: 10),
               ...topPublications.take(5).map((p) {
-                final cleanTitle =
-                    p.title.replaceAll(RegExp(r'[^\x00-\x7F]'), '?');
-                final cleanJournal = (p.journalName ?? 'N/A')
-                    .replaceAll(RegExp(r'[^\x00-\x7F]'), '?');
                 return pw.Padding(
                   padding: const pw.EdgeInsets.only(bottom: 10),
                   child: pw.Bullet(
                     text:
-                        '$cleanTitle (${p.year})\nCitations: ${p.citationCount} | Journal: $cleanJournal',
+                        '${p.title} (${p.year})\nCitations: ${p.citationCount} | Journal: ${p.journalName ?? 'N/A'}',
                     style: const pw.TextStyle(fontSize: 11),
                   ),
                 );

@@ -4,7 +4,7 @@ import 'package:patrol/patrol.dart';
 import 'patrol_test_helpers.dart';
 
 void main() {
-  patrolTest('TC6: Keywords Navigation displays keyword statistics and list', (
+  patrolTestWithDelay('TC6: Keywords Navigation displays keyword statistics and list', (
     $,
   ) async {
     await launchAndSignIn($);
@@ -21,7 +21,7 @@ void main() {
     expect($('Keyword Frequencies'), findsOneWidget);
   });
 
-  patrolTest('TC7: Keyword Details displays selected keyword analysis', (
+  patrolTestWithDelay('TC7: Keyword Details displays selected keyword analysis', (
     $,
   ) async {
     await launchAndSignIn($);

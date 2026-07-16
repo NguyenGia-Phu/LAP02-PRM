@@ -1,10 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:patrol/patrol.dart';
 import 'patrol_test_helpers.dart';
 
 void main() {
-  patrolTest('TC4: Journals Navigation displays journal statistics and list', (
+  patrolTestWithDelay('TC4: Journals Navigation displays journal statistics and list', (
     $,
   ) async {
     await launchAndSignIn($);
@@ -21,7 +21,7 @@ void main() {
     expect($('Ranked Journals List'), findsOneWidget);
   });
 
-  patrolTest('TC5: Journal Details displays selected journal information', (
+  patrolTestWithDelay('TC5: Journal Details displays selected journal information', (
     $,
   ) async {
     await launchAndSignIn($);

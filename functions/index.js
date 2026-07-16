@@ -9,25 +9,58 @@ setGlobalOptions({maxInstances: 10});
 admin.initializeApp();
 
 const supportedTypes = ["trending_topic", "highly_cited", "research_update"];
+const researchTopics = [
+  "machine learning",
+  "artificial intelligence",
+  "cybersecurity",
+  "internet of things",
+  "blockchain",
+  "cloud computing",
+  "data science",
+  "computer vision",
+  "natural language processing",
+  "software engineering",
+];
+
+function getHourlyNotificationSelection(now = new Date()) {
+  const hourNumber = Math.floor(now.getTime() / (60 * 60 * 1000));
+  return {
+    topic: researchTopics[hourNumber % researchTopics.length],
+    type: supportedTypes[hourNumber % supportedTypes.length],
+  };
+}
 
 async function fetchTrendingPublication(topic) {
   const selectedTopic = topic || "machine learning";
-  const params = new URLSearchParams({
-    search: selectedTopic,
-    sort: "cited_by_count:desc",
-    "per-page": "1",
-  });
-  const response = await fetch(`https://api.openalex.org/works?${params}`);
+  const requestUrl = new URL("https://api.openalex.org/works");
+  requestUrl.searchParams.set("search", selectedTopic);
+  requestUrl.searchParams.set("sort", "cited_by_count:desc");
+  requestUrl.searchParams.set("per-page", "1");
+  requestUrl.searchParams.set("mailto", "ndanthanh161@gmail.com");
 
-  if (!response.ok) {
-    throw new Error(`OpenAlex request failed with ${response.status}`);
-  }
+  let lastError;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(requestUrl);
+      if (!response.ok) {
+        throw new Error(`OpenAlex request failed with ${response.status}`);
+      }
 
-  const data = await response.json();
-  if (!data.results || data.results.length === 0) {
-    return null;
+      const data = await response.json();
+      return data.results && data.results[0] ? data.results[0] : null;
+    } catch (error) {
+      lastError = error;
+      logger.warn("OpenAlex notification lookup failed", {
+        topic: selectedTopic,
+        attempt,
+        error: error.message,
+      });
+      if (attempt < 3) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 500));
+      }
+    }
   }
-  return data.results[0];
+  throw lastError;
 }
 
 function normalizeType(type) {
@@ -64,15 +97,28 @@ function buildNotificationPayload(type, topic, publication) {
 async function sendTrendingTopicNotification(topic, type) {
   const selectedTopic = topic || "machine learning";
   const selectedType = normalizeType(type || "trending_topic");
-  const publication = await fetchTrendingPublication(selectedTopic);
-
-  if (!publication) {
-    logger.warn("No trending publication found", {topic: selectedTopic});
-    return {sent: false, topic: selectedTopic, type: selectedType};
+  let publication;
+  try {
+    publication = await fetchTrendingPublication(selectedTopic);
+  } catch (error) {
+    logger.warn("Using topic-only notification fallback", {
+      topic: selectedTopic,
+      error: error.message,
+    });
   }
 
+  const isTopicOnly = !publication;
+  publication = publication || {
+    title: `Latest ${selectedTopic} research`,
+    cited_by_count: 0,
+    publication_year: new Date().getUTCFullYear(),
+  };
+
   const publicationTitle = publication.title || "Trending research publication";
-  const notification = buildNotificationPayload(
+  const notification = isTopicOnly ? {
+    title: `Research update: ${selectedTopic}`,
+    body: `Tap to explore the latest publications about ${selectedTopic}.`,
+  } : buildNotificationPayload(
       selectedType,
       selectedTopic,
       publication,
@@ -85,6 +131,8 @@ async function sendTrendingTopicNotification(topic, type) {
       type: selectedType,
       topic: selectedTopic,
       publicationTitle,
+      publicationId: String(publication.id || ""),
+      publicationYear: String(publication.publication_year || 0),
       citations: String(publication.cited_by_count || 0),
     },
   });
@@ -121,8 +169,9 @@ exports.sendTrendingTopicNotificationNow = onRequest(
 );
 
 exports.sendDailyTrendingTopicNotification = onSchedule(
-    "every 24 hours",
+    "every 60 minutes",
     async () => {
-      await sendTrendingTopicNotification("machine learning", "trending_topic");
+      const selection = getHourlyNotificationSelection();
+      await sendTrendingTopicNotification(selection.topic, selection.type);
     },
 );
