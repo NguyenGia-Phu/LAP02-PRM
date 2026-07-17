@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../viewmodels/shared_research_selection_viewmodel.dart';
 import 'home/home_screen.dart';
 import 'journals/journals_screen.dart';
 import 'keywords/keywords_screen.dart';
@@ -19,24 +17,11 @@ class _MainShellScreenState extends State<MainShellScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final selection = context.watch<SharedResearchSelectionViewModel>();
-    final screens = [
-      const HomeScreen(),
-      JournalsScreen(
-        selectedLabel: selection.label,
-        selectedDomainId: selection.domainId,
-        selectedFieldId: selection.fieldId,
-        selectionKey: selection.key,
-        autoLoadSelection: _currentIndex == 1,
-      ),
-      KeywordsScreen(
-        selectedLabel: selection.label,
-        selectedDomainId: selection.domainId,
-        selectedFieldId: selection.fieldId,
-        selectionKey: selection.key,
-        autoLoadSelection: _currentIndex == 2,
-      ),
-      const ProfileTabScreen(),
+    const screens = [
+      HomeScreen(),
+      JournalsScreen(),
+      KeywordsScreen(),
+      ProfileTabScreen(),
     ];
 
     return Scaffold(

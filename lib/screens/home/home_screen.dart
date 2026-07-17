@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../../models/publication.dart';
 import '../../viewmodels/home_viewmodel.dart';
-import '../../viewmodels/shared_research_selection_viewmodel.dart';
 import '../../widgets/publication_card.dart';
 import 'publication_detail_screen.dart';
 
@@ -32,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen> {
   void _search(String topic) {
     if (topic.trim().isEmpty) return;
     FocusScope.of(context).unfocus();
-    context.read<SharedResearchSelectionViewModel>().setText(topic);
     context.read<HomeViewModel>().search(topic);
     _controller.text = topic;
     setState(() => _sortOption = SortOption.relevance);
@@ -40,7 +37,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _clearResults() {
     context.read<HomeViewModel>().clear();
-    context.read<SharedResearchSelectionViewModel>().clear();
     _controller.clear();
     setState(() => _sortOption = SortOption.relevance);
   }
@@ -206,12 +202,6 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildDashboardHeader(viewModel),
-          const SizedBox(height: 20),
-          _buildTrendChartSection(viewModel),
-          const SizedBox(height: 20),
-          const Divider(),
-          const SizedBox(height: 12),
           _buildResultsHeader(viewModel, sortedPubs.length),
           const SizedBox(height: 8),
           ListView.builder(
@@ -313,12 +303,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         backgroundColor: color.withValues(alpha: 0.1),
                         onPressed: () {
                           FocusScope.of(context).unfocus();
-                          context
-                              .read<SharedResearchSelectionViewModel>()
-                              .setDomain(
-                                label: domain.name,
-                                domainId: domain.id,
-                              );
                           context.read<HomeViewModel>().searchByDomain(domain);
                           _controller.text = domain.name;
                           setState(() => _sortOption = SortOption.relevance);
@@ -329,9 +313,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           label: Text(field.name),
                           onPressed: () {
                             FocusScope.of(context).unfocus();
-                            context
-                                .read<SharedResearchSelectionViewModel>()
-                                .setField(label: field.name, fieldId: field.id);
                             context.read<HomeViewModel>().searchByField(field);
                             _controller.text = field.name;
                             setState(() => _sortOption = SortOption.relevance);
@@ -373,258 +354,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 .toList(),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDashboardHeader(HomeViewModel viewModel) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Dashboard: ${viewModel.currentTopic}',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 16),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: 1.4,
-          children: [
-            _buildStatCard(
-              icon: Icons.article,
-              label: 'Total Publications',
-              value: '${viewModel.totalPublications}',
-              color: Colors.blue,
-            ),
-            _buildStatCard(
-              icon: Icons.format_quote,
-              label: 'Avg Citations',
-              value: viewModel.averageCitationCount.toStringAsFixed(1),
-              color: Colors.green,
-            ),
-            _buildStatCard(
-              icon: Icons.trending_up,
-              label: 'Most Active Year',
-              value: '${viewModel.mostActiveYear}',
-              color: Colors.orange,
-            ),
-            _buildStatCard(
-              icon: Icons.library_books,
-              label: 'Top Journal',
-              value: viewModel.topJournal,
-              color: Colors.purple,
-              small: true,
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        _buildHighlightCard(
-          icon: Icons.person,
-          color: Colors.teal,
-          label: 'Top Contributing Author',
-          value: viewModel.topAuthor,
-        ),
-        const SizedBox(height: 12),
-        if (viewModel.mostInfluentialPaper != null)
-          _buildHighlightCard(
-            icon: Icons.star,
-            color: Colors.amber[700]!,
-            label: 'Most Influential Paper',
-            value: viewModel.mostInfluentialPaper!.title,
-            subtitle:
-                'Citations: ${viewModel.mostInfluentialPaper!.citationCount}',
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => PublicationDetailScreen(
-                  publication: viewModel.mostInfluentialPaper!,
-                ),
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-    bool small = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const Spacer(),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: small ? 12 : 20,
-              color: color,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(label, style: const TextStyle(fontSize: 11, color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHighlightCard({
-    required IconData icon,
-    required Color color,
-    required String label,
-    required String value,
-    String? subtitle,
-    VoidCallback? onTap,
-  }) {
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: color,
-          child: Icon(icon, color: Colors.white),
-        ),
-        title: Text(
-          label,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (subtitle != null)
-              Text(subtitle, style: const TextStyle(fontSize: 12)),
-          ],
-        ),
-        trailing: onTap != null
-            ? const Icon(Icons.arrow_forward_ios, size: 16)
-            : null,
-        onTap: onTap,
-      ),
-    );
-  }
-
-  Widget _buildTrendChartSection(HomeViewModel viewModel) {
-    final byYear = viewModel.publicationsByYear;
-    if (byYear.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    final years = byYear.keys.toList();
-    final counts = byYear.values.toList();
-    final maxCount = counts.reduce((a, b) => a > b ? a : b).toDouble();
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Publications Per Year',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              height: 200,
-              child: BarChart(
-                BarChartData(
-                  maxY: maxCount * 1.2,
-                  barGroups: List.generate(years.length, (i) {
-                    return BarChartGroupData(
-                      x: i,
-                      barRods: [
-                        BarChartRodData(
-                          toY: counts[i].toDouble(),
-                          color: Theme.of(context).colorScheme.primary,
-                          width: years.length > 15 ? 8 : 16,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                      ],
-                    );
-                  }),
-                  titlesData: FlTitlesData(
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        interval: 1,
-                        getTitlesWidget: (value, meta) {
-                          final i = value.toInt();
-                          if (i < 0 || i >= years.length) {
-                            return const SizedBox.shrink();
-                          }
-                          if (years.length > 10 && i % 2 != 0) {
-                            return const SizedBox.shrink();
-                          }
-                          return Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              '${years[i]}',
-                              style: const TextStyle(
-                                fontSize: 9,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    leftTitles: AxisTitles(
-                      sideTitles: SideTitles(
-                        showTitles: true,
-                        reservedSize: 28,
-                        getTitlesWidget: (value, meta) {
-                          return Text(
-                            '${value.toInt()}',
-                            style: const TextStyle(
-                              fontSize: 9,
-                              color: Colors.grey,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
-                    ),
-                  ),
-                  gridData: const FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                  ),
-                  borderData: FlBorderData(show: false),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

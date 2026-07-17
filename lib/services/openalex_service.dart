@@ -84,11 +84,15 @@ class OpenAlexService {
     String topic, {
     int page = 1,
     int perPage = 100,
+    String? sort,
   }) async {
     final encoded = Uri.encodeComponent(topic);
+    final sortQuery = sort == null
+        ? ''
+        : '&sort=${Uri.encodeQueryComponent(sort)}';
     final uri = Uri.parse(
       '$_baseUrl/works?filter=title.search:$encoded&per-page=$perPage'
-      '&page=$page&api_key=$_apiKey',
+      '&page=$page$sortQuery&api_key=$_apiKey',
     );
     final label = 'searchByPage topic="$topic" page=$page';
     final data = await _getJson(uri, label);

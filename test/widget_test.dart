@@ -103,28 +103,20 @@ class MockHomeViewModel extends ChangeNotifier implements HomeViewModel {
 // Mock JournalsViewModel
 class MockJournalsViewModel extends ChangeNotifier
     implements JournalsViewModel {
+  final List<JournalStats> _journals;
+
+  MockJournalsViewModel([this._journals = const []]);
+
   @override
-  List<JournalStats> get journals => [];
+  List<JournalStats> get journals => _journals;
   @override
   bool get isLoading => false;
   @override
   String? get error => null;
   @override
-  String get currentTopic => '';
+  String get currentTopic => _journals.isEmpty ? '' : 'manual search';
   @override
   Future<void> loadJournals(String topic) async {}
-  @override
-  Future<void> loadJournalsForSelection({
-    required String label,
-    String? domainId,
-    String? fieldId,
-  }) async {}
-  @override
-  void sortByPublicationCount() {}
-  @override
-  void sortByTotalCitations() {}
-  @override
-  void sortByAvgCitations() {}
   @override
   void clear() {}
 }
@@ -144,12 +136,6 @@ class MockKeywordsViewModel extends ChangeNotifier
   String get currentTopic => '';
   @override
   Future<void> loadKeywords(String topic) async {}
-  @override
-  Future<void> loadKeywordsForSelection({
-    required String label,
-    String? domainId,
-    String? fieldId,
-  }) async {}
   @override
   void clear() {}
 }
@@ -179,7 +165,7 @@ class MockFcmService extends ChangeNotifier implements FcmService {
   @override
   Future<void> setupMessageHandlers() async {}
   @override
-  void clearNotifications() {
+  Future<void> clearNotifications() async {
     _notifications.clear();
     notifyListeners();
   }
@@ -253,10 +239,66 @@ void main() {
 
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Analyze'), findsOneWidget);
+    final journalSearch = tester.widget<TextField>(find.byType(TextField));
+    expect(journalSearch.controller?.text, isEmpty);
+
     expect(
       find.text('Enter a topic above to analyze publishing journals.'),
       findsOneWidget,
     );
+  });
+
+  testWidgets('JournalsScreen shows only journals ordered by latest year', (
+    WidgetTester tester,
+  ) async {
+    final publications = [
+      Publication(
+        id: 'W-new',
+        title: 'New publication',
+        year: 2026,
+        citationCount: 10,
+        authors: const [],
+        keywords: const [],
+      ),
+      Publication(
+        id: 'W-old',
+        title: 'Old publication',
+        year: 2023,
+        citationCount: 5,
+        authors: const [],
+        keywords: const [],
+      ),
+    ];
+    final journalStats = JournalStats(
+      name: 'Test Journal',
+      publicationCount: publications.length,
+      totalCitations: 15,
+      avgCitations: 7.5,
+      publications: publications,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MultiProvider(
+          providers: [
+            ChangeNotifierProvider<JournalsViewModel>.value(
+              value: MockJournalsViewModel([journalStats]),
+            ),
+            Provider<RemoteConfigService>.value(
+              value: MockRemoteConfigService(),
+            ),
+          ],
+          child: const JournalsScreen(),
+        ),
+      ),
+    );
+
+    expect(find.text('Latest Journals'), findsOneWidget);
+    expect(find.text('Latest publication: 2026'), findsOneWidget);
+    expect(find.textContaining('Analysis for:'), findsNothing);
+    expect(find.text('Unique Journals'), findsNothing);
+    expect(find.text('Avg Citation Rate'), findsNothing);
+    expect(find.text('Distribution of Top Journals'), findsNothing);
   });
 
   testWidgets('KeywordsScreen renders search bar and empty state', (
@@ -280,6 +322,9 @@ void main() {
 
     expect(find.byType(TextField), findsOneWidget);
     expect(find.text('Analyze'), findsOneWidget);
+    final keywordSearch = tester.widget<TextField>(find.byType(TextField));
+    expect(keywordSearch.controller?.text, isEmpty);
+
     expect(
       find.text('Enter a topic above to analyze research keywords.'),
       findsOneWidget,
@@ -308,6 +353,8 @@ void main() {
 
     expect(find.text('Researcher Profile'), findsOneWidget);
     expect(find.text('Sign Out'), findsOneWidget);
+    expect(find.text('Bookmarks'), findsOneWidget);
+    expect(find.text('No bookmarks yet.'), findsOneWidget);
     expect(find.text('Notification Center'), findsOneWidget);
     expect(find.text('machine learning'), findsOneWidget);
     expect(find.text('Tap to explore related publications'), findsOneWidget);

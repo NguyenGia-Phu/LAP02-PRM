@@ -11,6 +11,27 @@ class AuthService {
 
   // Get current user
   User? get currentUser => _auth.currentUser;
+  // Restore the previously authorized Google account without showing UI.
+  Future<User?> restoreSession() async {
+    if (_auth.currentUser != null) {
+      return _auth.currentUser;
+    }
+
+    try {
+      final googleUser = await _googleSignIn.signInSilently();
+      if (googleUser == null) return null;
+
+      final googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      return (await _auth.signInWithCredential(credential)).user;
+    } catch (error) {
+      debugPrint('Could not restore Google session: $error');
+      return null;
+    }
+  }
 
   // Sign in with Google
   Future<UserCredential?> signInWithGoogle() async {
@@ -23,7 +44,8 @@ class AuthService {
       }
 
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
       // Create a new credential
       final OAuthCredential credential = GoogleAuthProvider.credential(

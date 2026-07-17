@@ -11,7 +11,7 @@ import 'viewmodels/auth_viewmodel.dart';
 import 'viewmodels/home_viewmodel.dart';
 import 'viewmodels/journals_viewmodel.dart';
 import 'viewmodels/keywords_viewmodel.dart';
-import 'viewmodels/shared_research_selection_viewmodel.dart';
+import 'viewmodels/bookmarks_viewmodel.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell_screen.dart';
 
@@ -39,6 +39,8 @@ class _AppBootstrapState extends State<AppBootstrap> {
         options: DefaultFirebaseOptions.currentPlatform,
       );
     }
+    await AuthService().restoreSession();
+
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
     final fcmService = FcmService();
@@ -139,12 +141,16 @@ class JournalTrendApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => AuthViewModel(authService: AuthService()),
         ),
+        ChangeNotifierProxyProvider<AuthViewModel, BookmarksViewModel>(
+          create: (_) => BookmarksViewModel(),
+          update: (_, authViewModel, bookmarks) {
+            bookmarks!.setUser(authViewModel.user?.uid);
+            return bookmarks;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => HomeViewModel()),
         ChangeNotifierProvider(create: (_) => JournalsViewModel()),
         ChangeNotifierProvider(create: (_) => KeywordsViewModel()),
-        ChangeNotifierProvider(
-          create: (_) => SharedResearchSelectionViewModel(),
-        ),
         ChangeNotifierProvider.value(value: fcmService),
         Provider.value(value: remoteConfigService),
       ],

@@ -18,16 +18,8 @@ class KeywordsViewModel extends ChangeNotifier {
   String? get error => _error;
   String get currentTopic => _currentTopic;
 
-  Future<void> loadKeywords(String topic) {
-    return loadKeywordsForSelection(label: topic);
-  }
-
-  Future<void> loadKeywordsForSelection({
-    required String label,
-    String? domainId,
-    String? fieldId,
-  }) async {
-    final normalizedLabel = label.trim();
+  Future<void> loadKeywords(String topic) async {
+    final normalizedLabel = topic.trim();
     if (normalizedLabel.isEmpty) return;
 
     _isLoading = true;
@@ -39,30 +31,10 @@ class KeywordsViewModel extends ChangeNotifier {
 
     try {
       final results = await Future.wait([
-        _searchPage(
-          normalizedLabel,
-          domainId: domainId,
-          fieldId: fieldId,
-          page: 1,
-        ),
-        _searchPage(
-          normalizedLabel,
-          domainId: domainId,
-          fieldId: fieldId,
-          page: 2,
-        ),
-        _searchPage(
-          normalizedLabel,
-          domainId: domainId,
-          fieldId: fieldId,
-          page: 3,
-        ),
-        _searchPage(
-          normalizedLabel,
-          domainId: domainId,
-          fieldId: fieldId,
-          page: 4,
-        ),
+        _searchPage(normalizedLabel, page: 1),
+        _searchPage(normalizedLabel, page: 2),
+        _searchPage(normalizedLabel, page: 3),
+        _searchPage(normalizedLabel, page: 4),
       ]);
 
       final allPubs = <Publication>[];
@@ -166,26 +138,7 @@ class KeywordsViewModel extends ChangeNotifier {
     }
   }
 
-  Future<List<Publication>> _searchPage(
-    String topic, {
-    String? domainId,
-    String? fieldId,
-    required int page,
-  }) {
-    if (fieldId != null && fieldId.isNotEmpty) {
-      return _service.searchByDomainOrField(
-        fieldId: fieldId,
-        page: page,
-        perPage: 25,
-      );
-    }
-    if (domainId != null && domainId.isNotEmpty) {
-      return _service.searchByDomainOrField(
-        domainId: domainId,
-        page: page,
-        perPage: 25,
-      );
-    }
+  Future<List<Publication>> _searchPage(String topic, {required int page}) {
     return _service.searchPublicationsByPage(topic, page: page, perPage: 25);
   }
 

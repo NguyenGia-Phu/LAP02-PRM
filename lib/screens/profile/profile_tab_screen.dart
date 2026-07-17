@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/bookmarks_viewmodel.dart';
 import '../../firebase/fcm_service.dart';
 import '../../firebase/remote_config_service.dart';
 import '../../firebase/crashlytics_service.dart';
@@ -13,6 +14,7 @@ import '../../utils/pdf_generator.dart';
 import '../../models/journal_stats.dart';
 import '../../models/publication.dart';
 import '../filtered_publications_screen.dart';
+import '../home/publication_detail_screen.dart';
 
 class ProfileTabScreen extends StatefulWidget {
   const ProfileTabScreen({super.key});
@@ -238,6 +240,7 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
     final authVM = Provider.of<AuthViewModel>(context);
     final fcmService = Provider.of<FcmService>(context);
     final remoteConfig = Provider.of<RemoteConfigService>(context);
+    final bookmarks = context.watch<BookmarksViewModel?>();
     final user = authVM.user;
     final colorScheme = Theme.of(context).colorScheme;
 
@@ -256,19 +259,23 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
             _buildUserInfoCard(user, authVM, colorScheme),
             const SizedBox(height: 24),
 
-            // Section 2: FCM Notification Center
+            // Section 2: Publications bookmarked by this user
+            _buildSavedPublicationsSection(bookmarks, colorScheme),
+            const SizedBox(height: 24),
+
+            // Section 3: FCM Notification Center
             _buildNotificationCenter(fcmService, colorScheme),
             const SizedBox(height: 24),
 
-            // Section 3: Report Export
+            // Section 4: Report Export
             _buildReportExportSection(colorScheme),
             const SizedBox(height: 24),
 
-            // Section 4: Remote Config
+            // Section 5: Remote Config
             _buildRemoteConfigSection(remoteConfig, colorScheme),
             const SizedBox(height: 24),
 
-            // Section 5: Crashlytics Demo
+            // Section 6: Crashlytics Demo
             _buildCrashlyticsSection(colorScheme),
             const SizedBox(height: 32),
           ],
@@ -357,6 +364,143 @@ class _ProfileTabScreenState extends State<ProfileTabScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildSavedPublicationsSection(
+    BookmarksViewModel? bookmarks,
+    ColorScheme colorScheme,
+  ) {
+    final items = bookmarks?.items ?? const [];
+
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.bookmarks_rounded,
+                  color: colorScheme.primary,
+                  size: 22,
+                ),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Bookmarks',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  ),
+                ),
+                if (items.isNotEmpty && bookmarks != null)
+                  TextButton(
+                    onPressed: () => _confirmClearSavedPublications(bookmarks),
+                    child: const Text('Clear all'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Publications you explicitly bookmarked.',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 12),
+            if (bookmarks?.isLoading ?? false)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (items.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 20),
+                alignment: Alignment.center,
+                child: Text(
+                  'No bookmarks yet.',
+                  style: TextStyle(color: Colors.grey[600]),
+                ),
+              )
+            else
+              ...items.map((item) {
+                final publication = item.publication;
+                final journal = publication.journalName?.trim();
+                final details = [
+                  if (journal != null && journal.isNotEmpty) journal,
+                  publication.year.toString(),
+                  publication.citationCount.toString() + ' citations',
+                ].join(' / ');
+
+                return ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: CircleAvatar(
+                    backgroundColor: colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.bookmark_rounded,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                  title: Text(
+                    publication.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: Text(
+                    details,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: IconButton(
+                    tooltip: 'Remove bookmark',
+                    icon: const Icon(Icons.bookmark_remove_outlined),
+                    onPressed: bookmarks == null
+                        ? null
+                        : () => bookmarks.remove(publication.id),
+                  ),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          PublicationDetailScreen(publication: publication),
+                    ),
+                  ),
+                );
+              }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmClearSavedPublications(
+    BookmarksViewModel bookmarks,
+  ) async {
+    final shouldClear = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Clear saved publications?'),
+        content: const Text(
+          'This removes every publication saved on this device for your account.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('Clear all'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldClear == true) {
+      await bookmarks.clear();
+    }
   }
 
   Widget _buildNotificationCenter(

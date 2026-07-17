@@ -6,20 +6,7 @@ import '../../firebase/remote_config_service.dart';
 import 'keyword_detail_screen.dart';
 
 class KeywordsScreen extends StatefulWidget {
-  final String selectedLabel;
-  final String? selectedDomainId;
-  final String? selectedFieldId;
-  final String selectionKey;
-  final bool autoLoadSelection;
-
-  const KeywordsScreen({
-    super.key,
-    this.selectedLabel = '',
-    this.selectedDomainId,
-    this.selectedFieldId,
-    this.selectionKey = '',
-    this.autoLoadSelection = false,
-  });
+  const KeywordsScreen({super.key});
 
   @override
   State<KeywordsScreen> createState() => _KeywordsScreenState();
@@ -27,7 +14,6 @@ class KeywordsScreen extends StatefulWidget {
 
 class _KeywordsScreenState extends State<KeywordsScreen> {
   final _controller = TextEditingController();
-  String _lastLoadedSelectionKey = '';
 
   final List<Color> _chartColors = [
     Colors.blue,
@@ -47,36 +33,7 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
     if (normalized.isEmpty) return;
     FocusScope.of(context).unfocus();
     _controller.text = normalized;
-    _lastLoadedSelectionKey = 'manual|';
     context.read<KeywordsViewModel>().loadKeywords(normalized);
-  }
-
-  void _autoLoadSelection() {
-    if (!mounted || !widget.autoLoadSelection) return;
-
-    final label = widget.selectedLabel.trim();
-    if (label.isEmpty || widget.selectionKey == _lastLoadedSelectionKey) return;
-
-    final viewModel = context.read<KeywordsViewModel>();
-    _controller.text = label;
-    _lastLoadedSelectionKey = widget.selectionKey;
-    viewModel.loadKeywordsForSelection(
-      label: label,
-      domainId: widget.selectedDomainId,
-      fieldId: widget.selectedFieldId,
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _autoLoadSelection());
-  }
-
-  @override
-  void didUpdateWidget(covariant KeywordsScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _autoLoadSelection());
   }
 
   @override
@@ -102,7 +59,6 @@ class _KeywordsScreenState extends State<KeywordsScreen> {
                   onPressed: () {
                     viewModel.clear();
                     _controller.clear();
-                    _lastLoadedSelectionKey = '';
                   },
                 ),
               ]

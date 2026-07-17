@@ -1,25 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:fl_chart/fl_chart.dart';
 import '../../viewmodels/journals_viewmodel.dart';
 import '../../firebase/remote_config_service.dart';
 import 'journal_detail_screen.dart';
 
 class JournalsScreen extends StatefulWidget {
-  final String selectedLabel;
-  final String? selectedDomainId;
-  final String? selectedFieldId;
-  final String selectionKey;
-  final bool autoLoadSelection;
-
-  const JournalsScreen({
-    super.key,
-    this.selectedLabel = '',
-    this.selectedDomainId,
-    this.selectedFieldId,
-    this.selectionKey = '',
-    this.autoLoadSelection = false,
-  });
+  const JournalsScreen({super.key});
 
   @override
   State<JournalsScreen> createState() => _JournalsScreenState();
@@ -27,8 +13,6 @@ class JournalsScreen extends StatefulWidget {
 
 class _JournalsScreenState extends State<JournalsScreen> {
   final _controller = TextEditingController();
-  String _currentSort = 'Publications';
-  String _lastLoadedSelectionKey = '';
 
   final List<Color> _chartColors = [
     Colors.blue,
@@ -48,36 +32,7 @@ class _JournalsScreenState extends State<JournalsScreen> {
     if (normalized.isEmpty) return;
     FocusScope.of(context).unfocus();
     _controller.text = normalized;
-    _lastLoadedSelectionKey = 'manual|';
     context.read<JournalsViewModel>().loadJournals(normalized);
-  }
-
-  void _autoLoadSelection() {
-    if (!mounted || !widget.autoLoadSelection) return;
-
-    final label = widget.selectedLabel.trim();
-    if (label.isEmpty || widget.selectionKey == _lastLoadedSelectionKey) return;
-
-    final viewModel = context.read<JournalsViewModel>();
-    _controller.text = label;
-    _lastLoadedSelectionKey = widget.selectionKey;
-    viewModel.loadJournalsForSelection(
-      label: label,
-      domainId: widget.selectedDomainId,
-      fieldId: widget.selectedFieldId,
-    );
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _autoLoadSelection());
-  }
-
-  @override
-  void didUpdateWidget(covariant JournalsScreen oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _autoLoadSelection());
   }
 
   @override
@@ -103,7 +58,6 @@ class _JournalsScreenState extends State<JournalsScreen> {
                   onPressed: () {
                     viewModel.clear();
                     _controller.clear();
-                    _lastLoadedSelectionKey = '';
                   },
                 ),
               ]
@@ -229,177 +183,7 @@ class _JournalsScreenState extends State<JournalsScreen> {
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Analysis for: ${viewModel.currentTopic}',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _buildOverallMetrics(viewModel),
-          const SizedBox(height: 20),
-          _buildChartSection(viewModel),
-          const SizedBox(height: 24),
-          _buildRankedListSection(viewModel),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOverallMetrics(JournalsViewModel viewModel) {
-    // Calculate total publications & average citation rate across all grouped journals
-    final totalPublications = viewModel.journals.fold<int>(
-      0,
-      (sum, j) => sum + j.publicationCount,
-    );
-    final totalCitations = viewModel.journals.fold<int>(
-      0,
-      (sum, j) => sum + j.totalCitations,
-    );
-    final overallAvgCitations = totalPublications == 0
-        ? 0.0
-        : totalCitations / totalPublications;
-
-    return Row(
-      children: [
-        Expanded(
-          child: _buildMetricCard(
-            icon: Icons.store,
-            color: Colors.purple,
-            value: '${viewModel.journals.length}',
-            label: 'Unique Journals',
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildMetricCard(
-            icon: Icons.format_quote,
-            color: Colors.green,
-            value: overallAvgCitations.toStringAsFixed(1),
-            label: 'Avg Citation Rate',
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMetricCard({
-    required IconData icon,
-    required Color color,
-    required String value,
-    required String label,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 22,
-              color: color,
-            ),
-          ),
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChartSection(JournalsViewModel viewModel) {
-    final list = viewModel.journals;
-    final topCount = list.length > 5 ? 5 : list.length;
-    final topJournals = list.take(topCount).toList();
-
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Distribution of Top Journals',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  flex: 4,
-                  child: SizedBox(
-                    height: 150,
-                    child: PieChart(
-                      PieChartData(
-                        sections: List.generate(topCount, (i) {
-                          final journal = topJournals[i];
-                          return PieChartSectionData(
-                            value: journal.publicationCount.toDouble(),
-                            title: '${journal.publicationCount}',
-                            color: _chartColors[i % _chartColors.length],
-                            radius: 50,
-                            titleStyle: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          );
-                        }),
-                        sectionsSpace: 2,
-                        centerSpaceRadius: 25,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  flex: 6,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(topCount, (i) {
-                      final journal = topJournals[i];
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 12,
-                              height: 12,
-                              decoration: BoxDecoration(
-                                color: _chartColors[i % _chartColors.length],
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                journal.name,
-                                style: const TextStyle(fontSize: 11),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+        children: [_buildRankedListSection(viewModel)],
       ),
     );
   }
@@ -419,15 +203,9 @@ class _JournalsScreenState extends State<JournalsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              'Ranked Journals List',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            _buildSortingDropdown(viewModel),
-          ],
+        const Text(
+          'Latest Journals',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const SizedBox(height: 12),
         ListView.separated(
@@ -490,6 +268,11 @@ class _JournalsScreenState extends State<JournalsScreen> {
                           ),
                         ],
                       ),
+                      Text(
+                        'Latest publication: ' +
+                            journal.latestPublicationYear.toString(),
+                        style: const TextStyle(fontSize: 12),
+                      ),
                       const SizedBox(height: 6),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),
@@ -515,34 +298,6 @@ class _JournalsScreenState extends State<JournalsScreen> {
               ),
             );
           },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSortingDropdown(JournalsViewModel viewModel) {
-    return PopupMenuButton<String>(
-      icon: const Icon(Icons.sort),
-      initialValue: _currentSort,
-      onSelected: (val) {
-        setState(() => _currentSort = val);
-        if (val == 'Publications') {
-          viewModel.sortByPublicationCount();
-        } else if (val == 'Total Citations') {
-          viewModel.sortByTotalCitations();
-        } else if (val == 'Avg Citations') {
-          viewModel.sortByAvgCitations();
-        }
-      },
-      itemBuilder: (_) => [
-        const PopupMenuItem(value: 'Publications', child: Text('Publications')),
-        const PopupMenuItem(
-          value: 'Total Citations',
-          child: Text('Total Citations'),
-        ),
-        const PopupMenuItem(
-          value: 'Avg Citations',
-          child: Text('Avg Citations'),
         ),
       ],
     );

@@ -16,16 +16,8 @@ class JournalsViewModel extends ChangeNotifier {
   String? get error => _error;
   String get currentTopic => _currentTopic;
 
-  Future<void> loadJournals(String topic) {
-    return loadJournalsForSelection(label: topic);
-  }
-
-  Future<void> loadJournalsForSelection({
-    required String label,
-    String? domainId,
-    String? fieldId,
-  }) async {
-    final normalizedLabel = label.trim();
+  Future<void> loadJournals(String topic) async {
+    final normalizedLabel = topic.trim();
     if (normalizedLabel.isEmpty) return;
 
     _isLoading = true;
@@ -36,30 +28,10 @@ class JournalsViewModel extends ChangeNotifier {
 
     try {
       final results = await Future.wait([
-        _searchPage(
-          normalizedLabel,
-          domainId: domainId,
-          fieldId: fieldId,
-          page: 1,
-        ),
-        _searchPage(
-          normalizedLabel,
-          domainId: domainId,
-          fieldId: fieldId,
-          page: 2,
-        ),
-        _searchPage(
-          normalizedLabel,
-          domainId: domainId,
-          fieldId: fieldId,
-          page: 3,
-        ),
-        _searchPage(
-          normalizedLabel,
-          domainId: domainId,
-          fieldId: fieldId,
-          page: 4,
-        ),
+        _searchPage(normalizedLabel, page: 1),
+        _searchPage(normalizedLabel, page: 2),
+        _searchPage(normalizedLabel, page: 3),
+        _searchPage(normalizedLabel, page: 4),
       ]);
 
       final allPubs = <Publication>[];
@@ -81,6 +53,7 @@ class JournalsViewModel extends ChangeNotifier {
       _journals = groups.entries.map((entry) {
         final name = entry.key;
         final list = entry.value;
+        list.sort((a, b) => b.year.compareTo(a.year));
         final totalCitations = list.fold<int>(
           0,
           (sum, p) => sum + p.citationCount,
@@ -95,9 +68,7 @@ class JournalsViewModel extends ChangeNotifier {
         );
       }).toList();
 
-      _journals.sort(
-        (a, b) => b.publicationCount.compareTo(a.publicationCount),
-      );
+      _journals.sort(compareJournalsByLatestPublication);
     } catch (e, st) {
       debugPrint('[JournalsViewModel] loadJournals failed: $e');
       debugPrintStack(
@@ -111,42 +82,13 @@ class JournalsViewModel extends ChangeNotifier {
     }
   }
 
-  Future<List<Publication>> _searchPage(
-    String topic, {
-    String? domainId,
-    String? fieldId,
-    required int page,
-  }) {
-    if (fieldId != null && fieldId.isNotEmpty) {
-      return _service.searchByDomainOrField(
-        fieldId: fieldId,
-        page: page,
-        perPage: 25,
-      );
-    }
-    if (domainId != null && domainId.isNotEmpty) {
-      return _service.searchByDomainOrField(
-        domainId: domainId,
-        page: page,
-        perPage: 25,
-      );
-    }
-    return _service.searchPublicationsByPage(topic, page: page, perPage: 25);
-  }
-
-  void sortByPublicationCount() {
-    _journals.sort((a, b) => b.publicationCount.compareTo(a.publicationCount));
-    notifyListeners();
-  }
-
-  void sortByTotalCitations() {
-    _journals.sort((a, b) => b.totalCitations.compareTo(a.totalCitations));
-    notifyListeners();
-  }
-
-  void sortByAvgCitations() {
-    _journals.sort((a, b) => b.avgCitations.compareTo(a.avgCitations));
-    notifyListeners();
+  Future<List<Publication>> _searchPage(String topic, {required int page}) {
+    return _service.searchPublicationsByPage(
+      topic,
+      page: page,
+      perPage: 25,
+      sort: 'publication_date:desc',
+    );
   }
 
   void clear() {

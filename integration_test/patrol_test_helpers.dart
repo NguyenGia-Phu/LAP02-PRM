@@ -86,7 +86,7 @@ Future<void> searchTopic(PatrolIntegrationTester $, String topic) async {
   await $(TextField).enterText(topic);
   await $('Search').tap();
   await $(
-    find.textContaining('Dashboard:'),
+    find.textContaining('Publications ('),
   ).waitUntilVisible(timeout: const Duration(seconds: 120));
 }
 

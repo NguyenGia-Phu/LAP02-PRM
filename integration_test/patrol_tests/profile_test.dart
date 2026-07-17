@@ -3,14 +3,16 @@ import 'package:patrol/patrol.dart';
 import 'patrol_test_helpers.dart';
 
 void main() {
-  patrolTestWithDelay('TC8: Profile Navigation displays user profile information', (
-    $,
-  ) async {
-    await launchAndSignIn($);
-    await openProfileTab($);
+  patrolTestWithDelay(
+    'TC8: Profile Navigation displays user profile information',
+    ($) async {
+      await launchAndSignIn($);
+      await openProfileTab($);
 
-    expect($('Researcher Profile'), findsOneWidget);
-    expect($('Sign Out'), findsOneWidget);
-    expect($('Notification Center'), findsOneWidget);
-  });
+      expect($('Researcher Profile'), findsOneWidget);
+      expect($('Sign Out'), findsOneWidget);
+      expect($('Bookmarks'), findsOneWidget);
+      expect($('Notification Center'), findsOneWidget);
+    },
+  );
 }
